@@ -1,0 +1,3421 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>HYPERBULK 增肌營養追蹤器 | AI 視覺辨識 × 雲端同步</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans TC"', 'system-ui', '-apple-system', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- Babel Standalone for JSX compilation in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      background-color: #070B12;
+      color: #F1F5F9;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-[#070B12] text-slate-100 antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useMemo, useRef } from 'https://esm.sh/react@18.3.1';
+    import ReactDOM from 'https://esm.sh/react-dom@18.3.1/client';
+    import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      signInWithPopup,
+      GoogleAuthProvider,
+      signOut,
+      onAuthStateChanged,
+      updateProfile
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      getDoc,
+      onSnapshot
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    // ==========================================
+    // 1. 內建台灣在地化快速輸入菜單與營養資料庫
+    // ==========================================
+    const PRESET_FOOD_CATEGORIES = [
+      {
+        id: 'breakfast',
+        name: '早餐店系列',
+        items: [
+          {
+            id: 'bf-tuna-pancake',
+            name: '鮪魚蛋餅',
+            portion: '1份 (約170g)',
+            calories: 345,
+            protein: 16,
+            carbs: 32,
+            fat: 17,
+            tag: '高蛋白早餐'
+          },
+          {
+            id: 'bf-plain-pancake',
+            name: '原味蛋餅',
+            portion: '1份 (約130g)',
+            calories: 255,
+            protein: 9,
+            carbs: 29,
+            fat: 11,
+            tag: '經典基本款'
+          },
+          {
+            id: 'bf-mcmuffin',
+            name: '豬肉滿福堡加蛋',
+            portion: '1個 (168g)',
+            calories: 390,
+            protein: 22,
+            carbs: 30,
+            fat: 20,
+            tag: '增肌推薦'
+          },
+          {
+            id: 'bf-milktea',
+            name: '大杯冰奶茶',
+            portion: '1杯 (500ml)',
+            calories: 320,
+            protein: 2,
+            carbs: 52,
+            fat: 11,
+            tag: '高糖份注意'
+          },
+          {
+            id: 'bf-soymilk',
+            name: '無糖豆漿',
+            portion: '1杯 (450ml)',
+            calories: 145,
+            protein: 15.3,
+            carbs: 6.3,
+            fat: 6.5,
+            tag: '優質植物蛋白'
+          }
+        ]
+      },
+      {
+        id: 'fastfood',
+        name: '連鎖速食',
+        items: [
+          {
+            id: 'ff-bigmac',
+            name: '麥當勞大麥克',
+            portion: '1個 (216g)',
+            calories: 548,
+            protein: 26,
+            carbs: 44,
+            fat: 30,
+            tag: '高熱量增肌'
+          },
+          {
+            id: 'ff-nuggets',
+            name: '麥克雞塊',
+            portion: '6塊 (96g)',
+            calories: 270,
+            protein: 15,
+            carbs: 16,
+            fat: 16,
+            tag: '點心補充'
+          },
+          {
+            id: 'ff-fries',
+            name: '無鹽薯條',
+            portion: '中包 (114g)',
+            calories: 330,
+            protein: 4,
+            carbs: 42,
+            fat: 16,
+            tag: '快碳補充'
+          }
+        ]
+      },
+      {
+        id: 'healthy',
+        name: '健康餐/超商',
+        items: [
+          {
+            id: 'hc-chicken-bento',
+            name: '舒肥雞胸肉便當',
+            portion: '1盒 (約420g)',
+            calories: 520,
+            protein: 42,
+            carbs: 62,
+            fat: 11,
+            tag: '增肌首選'
+          },
+          {
+            id: 'hc-tuna-can',
+            name: '水煮鮪魚罐頭',
+            portion: '1罐瀝乾 (130g)',
+            calories: 135,
+            protein: 30,
+            carbs: 0,
+            fat: 1.5,
+            tag: '極致純蛋白'
+          },
+          {
+            id: 'hc-tea-egg',
+            name: '茶葉蛋',
+            portion: '1顆 (55g)',
+            calories: 75,
+            protein: 7,
+            carbs: 0.6,
+            fat: 5,
+            tag: '隨手補蛋白'
+          },
+          {
+            id: 'hc-sweet-potato',
+            name: '地瓜',
+            portion: '中條蒸烤 (165g)',
+            calories: 185,
+            protein: 2.6,
+            carbs: 42,
+            fat: 0.3,
+            tag: '優質原型碳水'
+          }
+        ]
+      },
+      {
+        id: 'local',
+        name: '在地小吃',
+        items: [
+          {
+            id: 'lc-minxiong-goose',
+            name: '民雄鵝肉',
+            portion: '1份切盤 (約200g)',
+            calories: 460,
+            protein: 38,
+            carbs: 2,
+            fat: 33,
+            tag: '嘉義必吃高蛋白'
+          },
+          {
+            id: 'lc-turkey-rice',
+            name: '火雞肉飯',
+            portion: '1碗 (約240g)',
+            calories: 430,
+            protein: 24,
+            carbs: 52,
+            fat: 14,
+            tag: '增肌碳水蛋白組'
+          }
+        ]
+      }
+    ];
+
+    const ACTIVITY_LEVELS = [
+      { value: 1.2, label: '久坐生活 (1.2x)', desc: '辦公室工作，幾乎沒有規律運動' },
+      { value: 1.375, label: '輕度活動 (1.375x)', desc: '每週進行 1～3 天輕度運動或重訓' },
+      { value: 1.55, label: '中度活動 (1.55x)', desc: '每週進行 3～5 天中等至高強度肌力訓練' },
+      { value: 1.725, label: '高度活動 (1.725x)', desc: '每週 6～7 天高強度訓練或體力工作' },
+      { value: 1.9, label: '極高強度 (1.9x)', desc: '專業運動員、每日雙重訓練或重度勞力' }
+    ];
+
+    const SURPLUS_MODES = [
+      { id: 'lean', name: '乾淨增肌 (Lean)', surplus: 250 },
+      { id: 'standard', name: '標準增肌 (Standard)', surplus: 350 },
+      { id: 'aggressive', name: '突破增肌 (Bulk+)', surplus: 500 }
+    ];
+
+    /**
+     * BMR, TDEE 與增肌目標營養素計算公式 (Mifflin-St Jeor Equation)
+     */
+    function calculateBulkingNutrition({
+      gender = 'male',
+      age = 25,
+      height = 175,
+      weight = 70,
+      activityLevel = 1.55,
+      surplus = 350
+    }) {
+      const w = Number(weight) || 70;
+      const h = Number(height) || 175;
+      const a = Number(age) || 25;
+      const act = Number(activityLevel) || 1.55;
+      const sur = Number(surplus) || 350;
+
+      const baseBmr = 10 * w + 6.25 * h - 5 * a + (gender === 'male' ? 5 : -161);
+      const bmr = Math.round(baseBmr);
+      const tdee = Math.round(baseBmr * act);
+      const targetCalories = Math.round(tdee + sur);
+
+      const protein = Math.round(w * 2.0);
+      const proteinCalories = protein * 4;
+
+      const fat = Math.round((targetCalories * 0.25) / 9);
+      const fatCalories = fat * 9;
+
+      const remainingCalories = Math.max(targetCalories - proteinCalories - fatCalories, 400);
+      const carbs = Math.round(remainingCalories / 4);
+
+      return { bmr, tdee, surplus: sur, targetCalories, protein, carbs, fat };
+    }
+
+    // ==========================================
+    // 2. Firebase 雲端同步與本機持久化服務
+    // ==========================================
+    const STORAGE_KEYS = {
+      FIREBASE_CONFIG: 'hypertrophy_firebase_config_v1',
+      GEMINI_API_KEY: 'hypertrophy_gemini_api_key_v1',
+      LOCAL_USER: 'hypertrophy_local_user_v1',
+      LOCAL_PROFILES: 'hypertrophy_profiles_v1',
+      LOCAL_LOGS: 'hypertrophy_logs_v1',
+      LOCAL_FAVORITES: 'hypertrophy_favorites_v1'
+    };
+
+    function getSavedFirebaseConfig() {
+      return {
+        apiKey: "AIzaSyBTuWsYjx58XI9-HwI3J8rrucDuORzubdQ",
+        authDomain: "heaith-979a4.firebaseapp.com",
+        projectId: "heaith-979a4",
+        storageBucket: "heaith-979a4.firebasestorage.app",
+        messagingSenderId: "807495383103",
+        appId: "1:807495383103:web:65964ce6e58a5bf64ee08a",
+        measurementId: "G-1Q5HCM8JNK"
+      };
+    }
+
+    function saveFirebaseConfig(configObj) {
+      if (!configObj) {
+        localStorage.removeItem(STORAGE_KEYS.FIREBASE_CONFIG);
+        return;
+      }
+      localStorage.setItem(STORAGE_KEYS.FIREBASE_CONFIG, JSON.stringify(configObj));
+    }
+
+    function getSavedGeminiKey() {
+      return localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || '';
+    }
+
+    function saveGeminiKey(key) {
+      localStorage.setItem(STORAGE_KEYS.GEMINI_API_KEY, (key || '').trim());
+    }
+
+    let firebaseInstances = null;
+    function initFirebaseClient() {
+      if (firebaseInstances) return firebaseInstances;
+      const config = getSavedFirebaseConfig();
+      if (!config || !config.apiKey || !config.projectId) return null;
+      try {
+        const app = getApps().length > 0 ? getApp() : initializeApp(config);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        firebaseInstances = { app, auth, db, isCloud: true };
+        return firebaseInstances;
+      } catch (err) {
+        console.warn('Firebase 初始化失敗:', err);
+        return null;
+      }
+    }
+
+    async function saveUserProfile(uid, profileData) {
+      const allProfiles = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_PROFILES) || '{}');
+      allProfiles[uid] = { ...profileData, updatedAt: new Date().toISOString() };
+      localStorage.setItem(STORAGE_KEYS.LOCAL_PROFILES, JSON.stringify(allProfiles));
+
+      const fb = initFirebaseClient();
+      if (fb?.db) {
+        const userDocRef = doc(fb.db, 'users', uid);
+        await setDoc(userDocRef, { profile: allProfiles[uid], updatedAt: new Date().toISOString() }, { merge: true });
+      }
+      return allProfiles[uid];
+    }
+
+    async function loadUserProfile(uid) {
+      const fb = initFirebaseClient();
+      if (fb?.db) {
+        try {
+          const userDocRef = doc(fb.db, 'users', uid);
+          const snap = await getDoc(userDocRef);
+          if (snap.exists() && snap.data()?.profile) {
+            const cloudProfile = snap.data().profile;
+            const allProfiles = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_PROFILES) || '{}');
+            allProfiles[uid] = cloudProfile;
+            localStorage.setItem(STORAGE_KEYS.LOCAL_PROFILES, JSON.stringify(allProfiles));
+            return cloudProfile;
+          }
+        } catch (e) {}
+      }
+      const allProfiles = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_PROFILES) || '{}');
+      return allProfiles[uid] || null;
+    }
+
+    async function saveDailyLogs(uid, dateStr, items) {
+      const allLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_LOGS) || '{}');
+      if (!allLogs[uid]) allLogs[uid] = {};
+      allLogs[uid][dateStr] = items;
+      localStorage.setItem(STORAGE_KEYS.LOCAL_LOGS, JSON.stringify(allLogs));
+
+      const fb = initFirebaseClient();
+      if (fb?.db) {
+        const logDocRef = doc(fb.db, 'users', uid, 'dailyLogs', dateStr);
+        await setDoc(logDocRef, { date: dateStr, items, updatedAt: new Date().toISOString() }, { merge: true });
+      }
+      return items;
+    }
+
+    function getAllUserLogsLocal(uid) {
+      const allLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_LOGS) || '{}');
+      return allLogs[uid] || {};
+    }
+
+    function subscribeDailyLog(uid, dateStr, callback) {
+      const localUserLogs = getAllUserLogsLocal(uid);
+      callback(localUserLogs[dateStr] || []);
+
+      const fb = initFirebaseClient();
+      if (fb?.db) {
+        const logDocRef = doc(fb.db, 'users', uid, 'dailyLogs', dateStr);
+        return onSnapshot(
+          logDocRef,
+          (snap) => {
+            if (snap.exists()) {
+              const cloudItems = snap.data()?.items || [];
+              const allLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_LOGS) || '{}');
+              if (!allLogs[uid]) allLogs[uid] = {};
+              allLogs[uid][dateStr] = cloudItems;
+              localStorage.setItem(STORAGE_KEYS.LOCAL_LOGS, JSON.stringify(allLogs));
+              callback(cloudItems);
+            }
+          },
+          () => {}
+        );
+      }
+      return () => {};
+    }
+
+    async function saveUserFavorites(uid, favoritesList) {
+      const allFavs = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_FAVORITES) || '{}');
+      allFavs[uid] = favoritesList;
+      localStorage.setItem(STORAGE_KEYS.LOCAL_FAVORITES, JSON.stringify(allFavs));
+
+      const fb = initFirebaseClient();
+      if (fb?.db) {
+        const favDocRef = doc(fb.db, 'users', uid, 'favorites', 'myList');
+        await setDoc(favDocRef, { items: favoritesList, updatedAt: new Date().toISOString() }, { merge: true });
+      }
+      return favoritesList;
+    }
+
+    function getUserFavoritesLocal(uid) {
+      const allFavs = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_FAVORITES) || '{}');
+      return allFavs[uid] || [];
+    }
+
+    function subscribeUserFavorites(uid, callback) {
+      callback(getUserFavoritesLocal(uid));
+
+      const fb = initFirebaseClient();
+      if (fb?.db) {
+        const favDocRef = doc(fb.db, 'users', uid, 'favorites', 'myList');
+        return onSnapshot(
+          favDocRef,
+          (snap) => {
+            if (snap.exists()) {
+              const cloudFavs = snap.data()?.items || [];
+              const allFavs = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_FAVORITES) || '{}');
+              allFavs[uid] = cloudFavs;
+              localStorage.setItem(STORAGE_KEYS.LOCAL_FAVORITES, JSON.stringify(allFavs));
+              callback(cloudFavs);
+            }
+          },
+          () => {}
+        );
+      }
+      return () => {};
+    }
+
+    function getCurrentGpsPosition(options = {}) {
+      return new Promise((resolve, reject) => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+          reject(new Error('此裝置或瀏覽器不支援 GPS 定位功能'));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            resolve({
+              lat: Number(pos.coords.latitude),
+              lng: Number(pos.coords.longitude),
+              accuracy: Math.round(pos.coords.accuracy || 0)
+            });
+          },
+          (err) => {
+            let reason = '無法取得定位';
+            if (err.code === 1) reason = '未授權定位權限 (PERMISSION_DENIED)';
+            else if (err.code === 2) reason = '無法偵測目前位置 (POSITION_UNAVAILABLE)';
+            else if (err.code === 3) reason = '取得定位逾時 (TIMEOUT)';
+            const customErr = new Error(reason);
+            customErr.code = err.code;
+            reject(customErr);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 7000,
+            maximumAge: 15000,
+            ...options
+          }
+        );
+      });
+    }
+
+    // Haversine 公式：計算兩組經緯度座標之間的球面距離（公尺 m）
+    function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
+      if (
+        typeof lat1 !== 'number' ||
+        typeof lon1 !== 'number' ||
+        typeof lat2 !== 'number' ||
+        typeof lon2 !== 'number' ||
+        Number.isNaN(lat1) ||
+        Number.isNaN(lon1) ||
+        Number.isNaN(lat2) ||
+        Number.isNaN(lon2)
+      ) {
+        return Infinity;
+      }
+      const R = 6371000;
+      const toRad = (deg) => (deg * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    // 嚴格設定觸發半徑 <= 20 公尺，由近到遠排序且最多只顯示前 3 筆
+    function getNearbyFavoritesWithin20m(
+      favorites = [],
+      currentCoords = null,
+      maxRadiusMeters = 20,
+      maxResults = 3
+    ) {
+      if (!currentCoords || typeof currentCoords.lat !== 'number' || typeof currentCoords.lng !== 'number') {
+        return [];
+      }
+      return favorites
+        .filter((fav) => typeof fav.lat === 'number' && typeof fav.lng === 'number')
+        .map((fav) => ({
+          ...fav,
+          distanceMeters: calculateHaversineDistanceMeters(
+            currentCoords.lat,
+            currentCoords.lng,
+            fav.lat,
+            fav.lng
+          )
+        }))
+        .filter((fav) => fav.distanceMeters <= maxRadiusMeters)
+        .sort((a, b) => a.distanceMeters - b.distanceMeters)
+        .slice(0, maxResults);
+    }
+
+    // ==========================================
+    // 3. Gemini API 影像辨識服務
+    // ==========================================
+    const SYSTEM_PROMPT = `你是一位專業的運動營養師與台灣飲食增肌顧問。
+請仔細觀察這張食物照片，辨識裡面的所有餐點、主食、配菜或飲品，並特別針對台灣常見飲食（如便當、早餐店、小吃、超商健康餐、速食等）進行精準的份量與營養素估算。
+
+請務必只回傳符合以下欄位的純 JSON 物件（不要包含 Markdown code block 標記）：
+{
+  "foodName": "餐點名稱（例如：烤雞腿便當含三樣配菜與半熟蛋）",
+  "portion": "估計份量描述（例如：1盒 / 約 450g）",
+  "calories": 數字（總熱量 kcal，整數）,
+  "protein": 數字（蛋白質克數 g，可至小數點一位）,
+  "carbs": 數字（碳水化合物克數 g，可至小數點一位）,
+  "fat": 數字（脂肪克數 g，可至小數點一位）,
+  "analysisNotes": "簡短列出辨識到的食材組成與增肌飲食建議（約 40~70 字）"
+}`;
+
+    function fileToCompressedBase64(file, maxWidth = 1024, quality = 0.82) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            const base64Data = dataUrl.split(',')[1];
+            resolve({ dataUrl, base64Data, mimeType: 'image/jpeg' });
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function analyzeFoodImageWithGemini({ base64Data, mimeType = 'image/jpeg', apiKey, userHint = '' }) {
+      const cleanKey = (apiKey || '').trim();
+      if (!cleanKey) throw new Error('請先設定 Gemini API Key');
+
+      const promptText = userHint
+        ? `${SYSTEM_PROMPT}\n\n使用者補充說明：「${userHint}」，請根據此說明調整份量與營養素估算。`
+        : SYSTEM_PROMPT;
+
+      const models = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+      let lastError = null;
+
+      for (const model of models) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: promptText },
+                    { inline_data: { mime_type: mimeType, data: base64Data } }
+                  ]
+                }
+              ],
+              generationConfig: {
+                temperature: 0.2,
+                responseMimeType: 'application/json'
+              }
+            })
+          });
+
+          if (!response.ok) {
+            const errBody = await response.json().catch(() => ({}));
+            throw new Error(errBody?.error?.message || `HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const cleanedJson = rawText
+            .replace(/^```json\s*/i, '')
+            .replace(/^```\s*/i, '')
+            .replace(/```\s*$/i, '')
+            .trim();
+          const parsed = JSON.parse(cleanedJson);
+          return {
+            foodName: parsed.foodName || 'AI 辨識餐點',
+            portion: parsed.portion || '1份',
+            calories: Math.round(Number(parsed.calories) || 0),
+            protein: Number((Number(parsed.protein) || 0).toFixed(1)),
+            carbs: Number((Number(parsed.carbs) || 0).toFixed(1)),
+            fat: Number((Number(parsed.fat) || 0).toFixed(1)),
+            analysisNotes: parsed.analysisNotes || '已根據食物照片自動估算份量與三大營養素。'
+          };
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw lastError || new Error('Gemini 辨識失敗');
+    }
+
+    const TEXT_TO_AI_PROMPT = `你是一位專業的運動營養師與台灣飲食增肌顧問。
+使用者會輸入一段餐點文字描述（例如：「一碗蝦仁蛋炒飯」、「大碗滷肉飯加滷蛋與燙青菜」）。
+請根據台灣常見外食與餐廳的實際份量，精準估算該餐點的總熱量與三大營養素（蛋白質、碳水化合物、脂肪）。
+
+請務必只回傳符合以下欄位的純 JSON 物件（不要包含 Markdown code block 標記）：
+{
+  "foodName": "標準化餐點名稱（例如：蝦仁蛋炒飯）",
+  "portion": "估計份量描述（例如：1碗 / 約 350g）",
+  "calories": 數字（總熱量 kcal，整數）,
+  "protein": 數字（蛋白質克數 g，可至小數點一位）,
+  "carbs": 數字（碳水化合物克數 g，可至小數點一位）,
+  "fat": 數字（脂肪克數 g，可至小數點一位）,
+  "analysisNotes": "簡短列出估算依據與增肌飲食建議（約 40~70 字）"
+}`;
+
+    async function analyzeFoodTextWithGemini({ foodText, apiKey }) {
+      const cleanText = (foodText || '').trim();
+      if (!cleanText) throw new Error('請輸入餐點文字描述');
+      const cleanKey = (apiKey || '').trim();
+      if (!cleanKey) throw new Error('MISSING_API_KEY');
+
+      const promptText = `${TEXT_TO_AI_PROMPT}\n\n使用者輸入餐點：「${cleanText}」`;
+      const models = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+      let lastError = null;
+
+      for (const model of models) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig: {
+                temperature: 0.2,
+                responseMimeType: 'application/json'
+              }
+            })
+          });
+
+          if (!response.ok) {
+            const errBody = await response.json().catch(() => ({}));
+            throw new Error(errBody?.error?.message || `HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const cleanedJson = rawText
+            .replace(/^```json\s*/i, '')
+            .replace(/^```\s*/i, '')
+            .replace(/```\s*$/i, '')
+            .trim();
+          const parsed = JSON.parse(cleanedJson);
+          return {
+            foodName: parsed.foodName || cleanText,
+            portion: parsed.portion || '1份',
+            calories: Math.round(Number(parsed.calories) || 0),
+            protein: Number((Number(parsed.protein) || 0).toFixed(1)),
+            carbs: Number((Number(parsed.carbs) || 0).toFixed(1)),
+            fat: Number((Number(parsed.fat) || 0).toFixed(1)),
+            analysisNotes: parsed.analysisNotes || `已根據文字「${cleanText}」自動估算份量與三大營養素。`
+          };
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw lastError || new Error('Gemini 文字估算失敗');
+    }
+
+    function estimateFoodTextFallback(rawText) {
+      const text = (rawText || '').trim();
+      const presets = [
+        {
+          keywords: ['蝦仁蛋炒飯', '蝦仁炒飯', '炒飯'],
+          foodName: text || '蝦仁蛋炒飯',
+          portion: '1碗 / 1盤 (約360g)',
+          calories: 680,
+          protein: 24.5,
+          carbs: 78.0,
+          fat: 29.0,
+          analysisNotes: 'AI 文字估算：含鮮蝦仁、雞蛋與大火快炒米飯，碳水與熱量充沛，適合增肌期訓練後補充。'
+        },
+        {
+          keywords: ['牛肉麵'],
+          foodName: text || '紅燒牛肉麵',
+          portion: '1碗 (約650g)',
+          calories: 720,
+          protein: 38.0,
+          carbs: 75.0,
+          fat: 28.0,
+          analysisNotes: 'AI 文字估算：牛腱/牛腩富含優質蛋白質與鐵質、肌酸，搭配麵條提供良好合成能量。'
+        },
+        {
+          keywords: ['水餃', '湯餃', '鍋貼'],
+          foodName: text || '手工水餃 10顆',
+          portion: '10顆 (約280g)',
+          calories: 550,
+          protein: 22.0,
+          carbs: 60.0,
+          fat: 24.0,
+          analysisNotes: 'AI 文字估算：豬肉高麗菜內餡搭配麵皮，兼具碳水與蛋白質。'
+        },
+        {
+          keywords: ['雞排', '鹹酥雞'],
+          foodName: text || '香炸大雞排',
+          portion: '1片 (約240g)',
+          calories: 630,
+          protein: 42.0,
+          carbs: 34.0,
+          fat: 36.0,
+          analysisNotes: 'AI 文字估算：高蛋白同時伴隨較高裹粉油脂，建議搭配無糖飲品平衡熱量。'
+        },
+        {
+          keywords: ['滷肉飯', '肉燥飯'],
+          foodName: text || '滷肉飯加滷蛋',
+          portion: '1碗 (約300g)',
+          calories: 560,
+          protein: 18.5,
+          carbs: 66.0,
+          fat: 24.5,
+          analysisNotes: 'AI 文字估算：經典台灣小吃，碳水與脂肪充足，建議額外搭配豆乾或滷蛋補足蛋白質。'
+        }
+      ];
+
+      for (const p of presets) {
+        if (p.keywords.some((k) => text.includes(k))) return p;
+      }
+
+      return {
+        foodName: text,
+        portion: '1份 (AI 估算標準份量)',
+        calories: 580,
+        protein: 26.0,
+        carbs: 64.0,
+        fat: 23.0,
+        analysisNotes: `AI 文字估算：已根據「${text}」常見外食比例推算三大營養素，可於下方微調確認後儲存。`
+      };
+    }
+
+    // ==========================================
+    // 4. 主畫面與互動元件
+    // ==========================================
+    function formatDateKey(dateObj) {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    const WEEKDAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
+    const MEAL_TYPES = [
+      { id: 'breakfast', label: '早餐', icon: '🌅' },
+      { id: 'lunch', label: '午餐', icon: '🍱' },
+      { id: 'prepost', label: '訓練前後', icon: '💪' },
+      { id: 'dinner', label: '晚餐', icon: '🍽️' },
+      { id: 'snack', label: '點心/宵夜', icon: '🥤' }
+    ];
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [authLoading, setAuthLoading] = useState(true);
+      const [isCloudConnected, setIsCloudConnected] = useState(false);
+
+      const [profile, setProfile] = useState(null);
+      const [showOnboarding, setShowOnboarding] = useState(false);
+      const [showCloudModal, setShowCloudModal] = useState(false);
+      const [showCalendarModal, setShowCalendarModal] = useState(false);
+
+      const [selectedDate, setSelectedDate] = useState(() => formatDateKey(new Date()));
+      const [dailyItems, setDailyItems] = useState([]);
+      const [allLogsCache, setAllLogsCache] = useState({});
+
+      const [formState, setFormState] = useState({
+        mealType: 'lunch',
+        foodName: '',
+        portion: '1份',
+        calories: '',
+        protein: '',
+        carbs: '',
+        fat: '',
+        aiRecognized: false,
+        aiNotes: ''
+      });
+      const [portionScale, setPortionScale] = useState(1);
+      const [baseFormValues, setBaseFormValues] = useState(null);
+      const [editingLogId, setEditingLogId] = useState(null);
+
+      const [activePresetCategory, setActivePresetCategory] = useState('breakfast');
+      const [activeBottomTab, setActiveBottomTab] = useState('dashboard');
+      const [aiLoading, setAiLoading] = useState(false);
+      const [aiPreviewUrl, setAiPreviewUrl] = useState('');
+      const [aiImagePayload, setAiImagePayload] = useState(null);
+      const [aiUserHint, setAiUserHint] = useState('');
+      const [aiTextQuery, setAiTextQuery] = useState('');
+      const [aiTextLoading, setAiTextLoading] = useState(false);
+
+      // 常吃套餐與 GPS 隱形定位整合系統狀態
+      const [favorites, setFavorites] = useState([]);
+      const [currentCoords, setCurrentCoords] = useState(null);
+      const [gpsStatus, setGpsStatus] = useState('idle');
+      const [gpsErrorMsg, setGpsErrorMsg] = useState('');
+      const [savingFavId, setSavingFavId] = useState(null);
+      const [showFavManager, setShowFavManager] = useState(false);
+
+      const [toastMessage, setToastMessage] = useState(null);
+
+      const formRef = useRef(null);
+
+      const showToast = (text, type = 'success') => {
+        setToastMessage({ text, type });
+        setTimeout(() => {
+          setToastMessage((prev) => (prev?.text === text ? null : prev));
+        }, 3200);
+      };
+
+      useEffect(() => {
+        const fb = initFirebaseClient();
+        setIsCloudConnected(Boolean(fb?.isCloud));
+
+        if (fb?.auth) {
+          const unsub = onAuthStateChanged(fb.auth, async (fbUser) => {
+            if (fbUser) {
+              const currentUser = {
+                uid: fbUser.uid,
+                email: fbUser.email || '肌肉養成者',
+                displayName: fbUser.displayName || fbUser.email?.split('@')[0] || '巨巨會員',
+                mode: 'firebase'
+              };
+              setUser(currentUser);
+              const loadedProfile = await loadUserProfile(currentUser.uid);
+              if (loadedProfile) {
+                setProfile(loadedProfile);
+                setShowOnboarding(false);
+              } else {
+                setShowOnboarding(true);
+              }
+              setAllLogsCache(getAllUserLogsLocal(currentUser.uid));
+            } else {
+              const savedLocalUser = localStorage.getItem(STORAGE_KEYS.LOCAL_USER);
+              if (savedLocalUser) {
+                const parsedUser = JSON.parse(savedLocalUser);
+                setUser(parsedUser);
+                const loadedProfile = await loadUserProfile(parsedUser.uid);
+                if (loadedProfile) {
+                  setProfile(loadedProfile);
+                  setShowOnboarding(false);
+                } else {
+                  setShowOnboarding(true);
+                }
+                setAllLogsCache(getAllUserLogsLocal(parsedUser.uid));
+              }
+            }
+            setAuthLoading(false);
+          });
+          return () => unsub();
+        } else {
+          const savedLocalUser = localStorage.getItem(STORAGE_KEYS.LOCAL_USER);
+          if (savedLocalUser) {
+            const parsedUser = JSON.parse(savedLocalUser);
+            setUser(parsedUser);
+            loadUserProfile(parsedUser.uid).then((loadedProfile) => {
+              if (loadedProfile) {
+                setProfile(loadedProfile);
+                setShowOnboarding(false);
+              } else {
+                setShowOnboarding(true);
+              }
+              setAllLogsCache(getAllUserLogsLocal(parsedUser.uid));
+              setAuthLoading(false);
+            });
+          } else {
+            setAuthLoading(false);
+          }
+        }
+      }, []);
+
+      useEffect(() => {
+        if (!user?.uid) return;
+        const unsub = subscribeDailyLog(user.uid, selectedDate, (items) => {
+          setDailyItems(items || []);
+          setAllLogsCache(getAllUserLogsLocal(user.uid));
+        });
+        return () => {
+          if (typeof unsub === 'function') unsub();
+        };
+      }, [user?.uid, selectedDate]);
+
+      useEffect(() => {
+        if (!user?.uid) return;
+        const unsub = subscribeUserFavorites(user.uid, (favItems) => {
+          setFavorites(favItems || []);
+        });
+        return () => {
+          if (typeof unsub === 'function') unsub();
+        };
+      }, [user?.uid]);
+
+      const refreshGpsLocation = async (silent = true) => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+          setGpsStatus('error');
+          setGpsErrorMsg('此瀏覽器不支援 GPS 定位');
+          return null;
+        }
+        setGpsStatus('locating');
+        try {
+          const coords = await getCurrentGpsPosition();
+          setCurrentCoords(coords);
+          setGpsStatus('granted');
+          setGpsErrorMsg('');
+          if (!silent) {
+            showToast(`📍 已更新目前位置 (精準度 ±${coords.accuracy}m)`);
+          }
+          return coords;
+        } catch (err) {
+          setGpsStatus(err.code === 1 ? 'denied' : 'error');
+          setGpsErrorMsg(err.message || '尚未開啟定位權限');
+          if (!silent) {
+            showToast(`定位提示：${err.message}（您仍可正常使用所有紀錄功能）`, 'error');
+          }
+          return null;
+        }
+      };
+
+      // 當打開網站或切換到「新增紀錄 (add)」頁面時，自動比對當下座標與常吃餐點座標
+      useEffect(() => {
+        if (!user?.uid) return;
+        if (activeBottomTab === 'dashboard' || activeBottomTab === 'add') {
+          refreshGpsLocation(true);
+        }
+      }, [user?.uid, activeBottomTab]);
+
+      // Haversine 距離 <= 20 公尺，由近到遠排序且最多顯示前 3 筆
+      const nearbyFavorites = useMemo(() => {
+        return getNearbyFavoritesWithin20m(favorites, currentCoords, 20, 3);
+      }, [favorites, currentCoords]);
+
+      const dailyTotals = useMemo(() => {
+        return dailyItems.reduce(
+          (acc, item) => {
+            acc.calories += Number(item.calories) || 0;
+            acc.protein += Number(item.protein) || 0;
+            acc.carbs += Number(item.carbs) || 0;
+            acc.fat += Number(item.fat) || 0;
+            return acc;
+          },
+          { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        );
+      }, [dailyItems]);
+
+      const targets = useMemo(() => {
+        if (profile?.targets) return profile.targets;
+        return calculateBulkingNutrition({
+          gender: 'male',
+          age: 25,
+          height: 175,
+          weight: 70,
+          activityLevel: 1.55,
+          surplus: 350
+        });
+      }, [profile]);
+
+      const calendarDays = useMemo(() => {
+        const center = new Date(selectedDate + 'T00:00:00');
+        const days = [];
+        for (let offset = -10; offset <= 10; offset++) {
+          const d = new Date(center);
+          d.setDate(center.getDate() + offset);
+          const dateStr = formatDateKey(d);
+          const dayLogs = dateStr === selectedDate ? dailyItems : allLogsCache[dateStr] || [];
+          const totalCal = dayLogs.reduce((sum, i) => sum + (Number(i.calories) || 0), 0);
+          const totalPro = dayLogs.reduce((sum, i) => sum + (Number(i.protein) || 0), 0);
+          days.push({
+            dateStr,
+            dayNumber: d.getDate(),
+            weekday: WEEKDAY_NAMES[d.getDay()],
+            isToday: dateStr === formatDateKey(new Date()),
+            hasLogs: dayLogs.length > 0,
+            isGoalMet:
+              dayLogs.length > 0 &&
+              totalCal >= targets.targetCalories * 0.85 &&
+              totalPro >= targets.protein * 0.85
+          });
+        }
+        return days;
+      }, [selectedDate, dailyItems, allLogsCache, targets]);
+
+      const populateFormWithFood = (food, isAi = false) => {
+        const base = {
+          foodName: food.name || food.foodName || '',
+          portion: food.portion || '1份',
+          calories: Math.round(Number(food.calories) || 0),
+          protein: Number((Number(food.protein) || 0).toFixed(1)),
+          carbs: Number((Number(food.carbs) || 0).toFixed(1)),
+          fat: Number((Number(food.fat) || 0).toFixed(1))
+        };
+        setBaseFormValues(base);
+        setPortionScale(1);
+        setFormState((prev) => ({
+          ...prev,
+          foodName: base.foodName,
+          portion: base.portion,
+          calories: String(base.calories),
+          protein: String(base.protein),
+          carbs: String(base.carbs),
+          fat: String(base.fat),
+          aiRecognized: isAi,
+          aiNotes: food.analysisNotes || ''
+        }));
+
+        setActiveBottomTab('add');
+        setTimeout(() => {
+          formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      };
+
+      const quickAddFoodDirectly = async (food) => {
+        if (!user?.uid) return;
+        const newEntry = {
+          id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          mealType: formState.mealType || 'lunch',
+          foodName: food.name,
+          portion: food.portion,
+          calories: Math.round(Number(food.calories) || 0),
+          protein: Number((Number(food.protein) || 0).toFixed(1)),
+          carbs: Number((Number(food.carbs) || 0).toFixed(1)),
+          fat: Number((Number(food.fat) || 0).toFixed(1)),
+          aiRecognized: false,
+          createdAt: new Date().toLocaleTimeString('zh-TW', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        };
+        const nextList = [newEntry, ...dailyItems];
+        setDailyItems(nextList);
+        await saveDailyLogs(user.uid, selectedDate, nextList);
+        setAllLogsCache(getAllUserLogsLocal(user.uid));
+        showToast(`已快速加入「${food.name}」(+${newEntry.protein}g 蛋白質)`);
+      };
+
+      const handleScaleChange = (scale) => {
+        setPortionScale(scale);
+        if (!baseFormValues) return;
+        setFormState((prev) => ({
+          ...prev,
+          portion: scale === 1 ? baseFormValues.portion : `${baseFormValues.portion} × ${scale}倍`,
+          calories: String(Math.round(baseFormValues.calories * scale)),
+          protein: String(Number((baseFormValues.protein * scale).toFixed(1))),
+          carbs: String(Number((baseFormValues.carbs * scale).toFixed(1))),
+          fat: String(Number((baseFormValues.fat * scale).toFixed(1)))
+        }));
+      };
+
+      const handleStartEditRecord = (item) => {
+        if (!item) return;
+        setEditingLogId(item.id);
+        const base = {
+          foodName: item.foodName || item.name || '',
+          portion: item.portion || '1份',
+          calories: Math.round(Number(item.calories) || 0),
+          protein: Number((Number(item.protein) || 0).toFixed(1)),
+          carbs: Number((Number(item.carbs) || 0).toFixed(1)),
+          fat: Number((Number(item.fat) || 0).toFixed(1))
+        };
+        setBaseFormValues(base);
+        setPortionScale(1);
+        setFormState({
+          mealType: item.mealType || 'lunch',
+          foodName: base.foodName,
+          portion: base.portion,
+          calories: String(base.calories),
+          protein: String(base.protein),
+          carbs: String(base.carbs),
+          fat: String(base.fat),
+          aiRecognized: Boolean(item.aiRecognized),
+          aiNotes: item.aiNotes || ''
+        });
+        setActiveBottomTab('add');
+        setTimeout(() => {
+          formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+        showToast(`✏️ 正在修改「${base.foodName}」，調整後點擊儲存即可更新`);
+      };
+
+      const handleCancelEditRecord = () => {
+        setEditingLogId(null);
+        setFormState({
+          mealType: 'lunch',
+          foodName: '',
+          portion: '1份',
+          calories: '',
+          protein: '',
+          carbs: '',
+          fat: '',
+          aiRecognized: false,
+          aiNotes: ''
+        });
+        setBaseFormValues(null);
+        setPortionScale(1);
+      };
+
+      const handleAddRecordSubmit = async (e) => {
+        e.preventDefault();
+        if (!user?.uid) return;
+        if (!formState.foodName.trim()) {
+          showToast('請輸入食物名稱', 'error');
+          return;
+        }
+
+        const p = Number(formState.protein) || 0;
+        const c = Number(formState.carbs) || 0;
+        const f = Number(formState.fat) || 0;
+        const cal =
+          Number(formState.calories) > 0
+            ? Math.round(Number(formState.calories))
+            : Math.round(p * 4 + c * 4 + f * 9);
+
+        let nextList;
+        const trimmedName = formState.foodName.trim();
+        const trimmedPortion = formState.portion.trim() || '1份';
+
+        if (editingLogId) {
+          nextList = dailyItems.map((item) =>
+            item.id === editingLogId
+              ? {
+                  ...item,
+                  mealType: formState.mealType,
+                  foodName: trimmedName,
+                  portion: trimmedPortion,
+                  calories: cal,
+                  protein: Number(p.toFixed(1)),
+                  carbs: Number(c.toFixed(1)),
+                  fat: Number(f.toFixed(1)),
+                  aiRecognized: formState.aiRecognized,
+                  aiNotes: formState.aiNotes || ''
+                  // 保留原本建立的時間 item.createdAt
+                }
+              : item
+          );
+        } else {
+          const newEntry = {
+            id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            mealType: formState.mealType,
+            foodName: trimmedName,
+            portion: trimmedPortion,
+            calories: cal,
+            protein: Number(p.toFixed(1)),
+            carbs: Number(c.toFixed(1)),
+            fat: Number(f.toFixed(1)),
+            aiRecognized: formState.aiRecognized,
+            aiNotes: formState.aiNotes || '',
+            createdAt: new Date().toLocaleTimeString('zh-TW', {
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          };
+          nextList = [newEntry, ...dailyItems];
+        }
+
+        setDailyItems(nextList);
+        await saveDailyLogs(user.uid, selectedDate, nextList);
+        setAllLogsCache(getAllUserLogsLocal(user.uid));
+
+        const wasEditing = Boolean(editingLogId);
+        setEditingLogId(null);
+        setFormState({
+          mealType: formState.mealType,
+          foodName: '',
+          portion: '1份',
+          calories: '',
+          protein: '',
+          carbs: '',
+          fat: '',
+          aiRecognized: false,
+          aiNotes: ''
+        });
+        setBaseFormValues(null);
+        setPortionScale(1);
+        setAiPreviewUrl('');
+        setAiImagePayload(null);
+        showToast(
+          wasEditing
+            ? `✅ 已更新「${trimmedName}」並同步至雲端`
+            : `已記錄「${trimmedName}」至 ${selectedDate}`
+        );
+        setActiveBottomTab('dashboard');
+      };
+
+      const handleDeleteRecord = async (id) => {
+        if (!user?.uid) return;
+        const nextList = dailyItems.filter((item) => item.id !== id);
+        setDailyItems(nextList);
+        await saveDailyLogs(user.uid, selectedDate, nextList);
+        setAllLogsCache(getAllUserLogsLocal(user.uid));
+        showToast('已刪除該筆飲食紀錄');
+      };
+
+      const handlePhotoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          const compressed = await fileToCompressedBase64(file);
+          setAiPreviewUrl(compressed.dataUrl);
+          setAiImagePayload(compressed);
+          await triggerGeminiAnalysis(compressed);
+        } catch (err) {
+          showToast('讀取照片失敗，請重試', 'error');
+        }
+      };
+
+      const triggerGeminiAnalysis = async (payloadOverride = null) => {
+        const payload = payloadOverride || aiImagePayload;
+        if (!payload) {
+          showToast('請先選擇或拍攝食物照片', 'error');
+          return;
+        }
+        const apiKey = getSavedGeminiKey();
+        if (!apiKey) {
+          setShowCloudModal(true);
+          showToast('請先填入 Gemini API Key 以啟用真實 AI 影像辨識，或點擊下方 AI 範例體驗', 'error');
+          return;
+        }
+        setAiLoading(true);
+        try {
+          const result = await analyzeFoodImageWithGemini({
+            base64Data: payload.base64Data,
+            mimeType: payload.mimeType,
+            apiKey,
+            userHint: aiUserHint
+          });
+          populateFormWithFood(result, true);
+          showToast(`✨ Gemini 辨識完成：${result.foodName}`);
+        } catch (err) {
+          showToast(`AI 辨識失敗：${err.message}`, 'error');
+        } finally {
+          setAiLoading(false);
+        }
+      };
+
+      const triggerTextToAiAnalysis = async (customText = null) => {
+        const queryText = (typeof customText === 'string' ? customText : aiTextQuery).trim();
+        if (!queryText) {
+          showToast('請先輸入餐點文字（例如：一碗蝦仁蛋炒飯）', 'error');
+          return;
+        }
+
+        const apiKey = getSavedGeminiKey();
+        setAiTextLoading(true);
+        try {
+          if (apiKey) {
+            const result = await analyzeFoodTextWithGemini({
+              foodText: queryText,
+              apiKey
+            });
+            populateFormWithFood(result, true);
+            showToast(`✨ Gemini 文字估算完成：${result.foodName}`);
+          } else {
+            await new Promise((r) => setTimeout(r, 450));
+            const fallbackResult = estimateFoodTextFallback(queryText);
+            populateFormWithFood(fallbackResult, true);
+            showToast(
+              `✨ AI 已估算「${fallbackResult.foodName}」並帶入下方表單！（設定 Gemini API Key 可啟用雲端即時推論）`
+            );
+          }
+          setAiTextQuery('');
+        } catch (err) {
+          showToast(`文字 AI 估算失敗：${err.message}`, 'error');
+        } finally {
+          setAiTextLoading(false);
+        }
+      };
+
+      const handleSaveAsFavorite = async (item) => {
+        if (!user?.uid) return;
+        setSavingFavId(item.id);
+        let coords = null;
+        let gpsWarning = '';
+
+        try {
+          coords = await getCurrentGpsPosition();
+          setCurrentCoords(coords);
+          setGpsStatus('granted');
+          setGpsErrorMsg('');
+        } catch (err) {
+          setGpsStatus(err.code === 1 ? 'denied' : 'error');
+          setGpsErrorMsg(err.message || '未授權定位');
+          if (currentCoords) {
+            coords = currentCoords;
+          } else {
+            gpsWarning = '（目前未開啟定位權限，僅儲存餐點營養素）';
+          }
+        }
+
+        const newFav = {
+          id: `fav_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name: item.foodName || item.name,
+          foodName: item.foodName || item.name,
+          portion: item.portion || '1份',
+          calories: Math.round(Number(item.calories) || 0),
+          protein: Number((Number(item.protein) || 0).toFixed(1)),
+          carbs: Number((Number(item.carbs) || 0).toFixed(1)),
+          fat: Number((Number(item.fat) || 0).toFixed(1)),
+          mealType: item.mealType || 'lunch',
+          lat: coords ? Number(coords.lat) : null,
+          lng: coords ? Number(coords.lng) : null,
+          accuracy: coords?.accuracy || null,
+          savedAt: new Date().toISOString()
+        };
+
+        const filtered = favorites.filter((f) => {
+          if ((f.foodName || f.name) !== newFav.foodName) return true;
+          if (typeof f.lat === 'number' && typeof newFav.lat === 'number') {
+            const dist = calculateHaversineDistanceMeters(f.lat, f.lng, newFav.lat, newFav.lng);
+            return dist > 20;
+          }
+          return false;
+        });
+
+        const nextFavorites = [newFav, ...filtered];
+        setFavorites(nextFavorites);
+        await saveUserFavorites(user.uid, nextFavorites);
+        setSavingFavId(null);
+
+        if (coords) {
+          showToast(
+            `⭐ 已將「${newFav.foodName}」與當下 GPS 座標 (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}) 存入常吃菜單！`
+          );
+        } else {
+          showToast(`⭐ 已將「${newFav.foodName}」存入常吃菜單！${gpsWarning}`);
+        }
+      };
+
+      const handleDeleteFavorite = async (favId) => {
+        if (!user?.uid) return;
+        const nextFavorites = favorites.filter((f) => f.id !== favId);
+        setFavorites(nextFavorites);
+        await saveUserFavorites(user.uid, nextFavorites);
+        showToast('已從常吃菜單移除');
+      };
+
+      const handleSimulateNearby20m = async () => {
+        const baseLat = currentCoords?.lat || 23.5583;
+        const baseLng = currentCoords?.lng || 120.4718;
+
+        let updatedFavs = [...favorites];
+        if (updatedFavs.filter((f) => typeof f.lat === 'number').length === 0) {
+          const demoFavs = [
+            {
+              id: `fav_demo_1`,
+              name: '火雞肉飯＋滷蛋（巷口常吃店）',
+              foodName: '火雞肉飯＋滷蛋（巷口常吃店）',
+              portion: '1碗+1顆',
+              calories: 505,
+              protein: 31,
+              carbs: 53,
+              fat: 19,
+              mealType: 'lunch',
+              lat: baseLat + 0.00003,
+              lng: baseLng + 0.00001,
+              savedAt: new Date().toISOString()
+            },
+            {
+              id: `fav_demo_2`,
+              name: '舒肥雞胸肉便當（健身餐盒店）',
+              foodName: '舒肥雞胸肉便當（健身餐盒店）',
+              portion: '1盒 (約420g)',
+              calories: 520,
+              protein: 42,
+              carbs: 62,
+              fat: 11,
+              mealType: 'lunch',
+              lat: baseLat + 0.00007,
+              lng: baseLng + 0.00002,
+              savedAt: new Date().toISOString()
+            },
+            {
+              id: `fav_demo_3`,
+              name: '鮪魚蛋餅＋無糖豆漿（轉角早餐店）',
+              foodName: '鮪魚蛋餅＋無糖豆漿（轉角早餐店）',
+              portion: '1組',
+              calories: 490,
+              protein: 31.3,
+              carbs: 38.3,
+              fat: 23.5,
+              mealType: 'breakfast',
+              lat: baseLat + 0.00013,
+              lng: baseLng + 0.00003,
+              savedAt: new Date().toISOString()
+            },
+            {
+              id: `fav_demo_4`,
+              name: '距離 18m 牛肉湯餃（商圈第4家-測試防擾上限3筆）',
+              foodName: '距離 18m 牛肉湯餃（商圈第4家）',
+              portion: '10顆',
+              calories: 580,
+              protein: 28,
+              carbs: 62,
+              fat: 23,
+              mealType: 'dinner',
+              lat: baseLat + 0.00016,
+              lng: baseLng + 0.00002,
+              savedAt: new Date().toISOString()
+            }
+          ];
+          updatedFavs = [...demoFavs, ...updatedFavs];
+          setFavorites(updatedFavs);
+          if (user?.uid) {
+            await saveUserFavorites(user.uid, updatedFavs);
+          }
+        } else {
+          const targetFav = updatedFavs.find((f) => typeof f.lat === 'number');
+          if (targetFav) {
+            setCurrentCoords({
+              lat: targetFav.lat - 0.00003,
+              lng: targetFav.lng - 0.00001,
+              accuracy: 5
+            });
+            setGpsStatus('granted');
+            showToast('📍 已模擬抵達常吃店家門口 (距離約 3.5m)，觸發 20m 內智慧推薦！');
+            return;
+          }
+        }
+
+        setCurrentCoords({ lat: baseLat, lng: baseLng, accuracy: 5 });
+        setGpsStatus('granted');
+        showToast('📍 已模擬抵達商圈店門口！Haversine 已篩選 20m 內最近的前 3 筆常吃套餐');
+      };
+
+      if (authLoading) {
+        return (
+          <div className="min-h-screen bg-[#070B12] text-slate-100 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center animate-pulse">
+                <span className="text-2xl">🏋️</span>
+              </div>
+              <p className="text-sm text-slate-400 font-medium tracking-wider">載入增肌雲端資料中...</p>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-[#070B12] text-slate-100 font-sans pb-28">
+          {toastMessage && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] pointer-events-none">
+              <div
+                className={`px-4 py-3 rounded-2xl shadow-2xl border backdrop-blur-md flex items-center gap-3 text-sm font-semibold ${
+                  toastMessage.type === 'error'
+                    ? 'bg-rose-950/90 border-rose-500/50 text-rose-200'
+                    : 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
+                }`}
+              >
+                <span>{toastMessage.type === 'error' ? '⚠️' : '✅'}</span>
+                <span>{toastMessage.text}</span>
+              </div>
+            </div>
+          )}
+
+          {!user ? (
+            <AuthView
+              isCloudConnected={isCloudConnected}
+              onOpenCloudSettings={() => setShowCloudModal(true)}
+              onLoginSuccess={async (loggedUser) => {
+                setUser(loggedUser);
+                localStorage.setItem(STORAGE_KEYS.LOCAL_USER, JSON.stringify(loggedUser));
+                const existingProfile = await loadUserProfile(loggedUser.uid);
+                if (existingProfile) {
+                  setProfile(existingProfile);
+                  setShowOnboarding(false);
+                } else {
+                  setShowOnboarding(true);
+                }
+                setAllLogsCache(getAllUserLogsLocal(loggedUser.uid));
+                showToast(`歡迎回來，${loggedUser.displayName}！`);
+              }}
+              showToast={showToast}
+            />
+          ) : (
+            <div className="max-w-lg mx-auto min-h-screen flex flex-col">
+              {/* 頂部導覽與橫向滑動日曆 */}
+              <header className="sticky top-0 z-30 bg-[#070B12]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 pt-3 pb-2.5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20">
+                      PRO
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-base font-extrabold tracking-tight text-white">
+                          HYPERBULK 增肌追蹤
+                        </h1>
+                        <button
+                          type="button"
+                          onClick={() => setShowCloudModal(true)}
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition cursor-pointer active:scale-95 ${
+                            getSavedGeminiKey()
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                          }`}
+                        >
+                          🔑 API / 雲端設定
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {user.displayName} · TDEE {targets.tdee} / 目標 {targets.targetCalories} kcal
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setShowOnboarding(true)}
+                      className="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-slate-700 transition active:scale-95"
+                    >
+                      ⚙️ 目標設定
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const fb = initFirebaseClient();
+                        if (fb?.auth) await signOut(fb.auth).catch(() => {});
+                        localStorage.removeItem(STORAGE_KEYS.LOCAL_USER);
+                        setUser(null);
+                        setProfile(null);
+                      }}
+                      className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-bold transition"
+                    >
+                      登出
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate(formatDateKey(new Date()))}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                        selectedDate === formatDateKey(new Date())
+                          ? 'bg-emerald-500 text-slate-950'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      今天
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date(selectedDate + 'T00:00:00');
+                        d.setDate(d.getDate() - 1);
+                        setSelectedDate(formatDateKey(d));
+                      }}
+                      title="前一天"
+                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                    >
+                      ◀
+                    </button>
+                    <span className="text-xs font-extrabold text-slate-200 px-1">{selectedDate}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date(selectedDate + 'T00:00:00');
+                        d.setDate(d.getDate() + 1);
+                        setSelectedDate(formatDateKey(d));
+                      }}
+                      title="後一天"
+                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                    >
+                      ▶
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendarModal(true)}
+                    className="flex items-center gap-1.5 text-xs font-extrabold text-cyan-300 bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 px-3 py-1.5 rounded-xl cursor-pointer shadow-sm transition active:scale-95"
+                  >
+                    <span>📅 選擇日期</span>
+                  </button>
+                </div>
+
+                {/* 橫向滑動日曆列 */}
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 scroll-smooth">
+                  {calendarDays.map((d) => {
+                    const isSelected = d.dateStr === selectedDate;
+                    return (
+                      <button
+                        key={d.dateStr}
+                        onClick={() => setSelectedDate(d.dateStr)}
+                        className={`flex-shrink-0 min-w-[50px] py-2 px-2.5 rounded-2xl border flex flex-col items-center justify-center transition-all active:scale-95 ${
+                          isSelected
+                            ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 border-emerald-300 shadow-lg shadow-emerald-500/25 font-black'
+                            : d.isToday
+                            ? 'bg-slate-800/90 text-emerald-300 border-emerald-500/40'
+                            : 'bg-slate-900/70 text-slate-400 border-slate-800/80 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className={`text-[10px] font-bold ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
+                          週{d.weekday}
+                        </span>
+                        <span className="text-sm font-extrabold leading-tight mt-0.5">{d.dayNumber}</span>
+                        <div className="mt-1 flex items-center gap-1 h-1.5">
+                          {d.hasLogs && (
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isSelected ? 'bg-slate-950' : d.isGoalMet ? 'bg-emerald-400' : 'bg-amber-400'
+                              }`}
+                            />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </header>
+
+              {/* 主內容區 */}
+              <main className="flex-1 px-4 pt-4 space-y-5">
+                {/* 0. 📍 附近常吃推薦 (GPS 20m Haversine 精準防擾，由近到遠最多顯示前 3 筆) */}
+                <section className="bg-gradient-to-r from-slate-900 via-[#0E172A] to-slate-900 border border-cyan-500/30 rounded-3xl p-3.5 shadow-xl space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-black text-white flex items-center gap-1.5">
+                        <span>📍 附近常吃推薦</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold">
+                          20m 精準感應 · Top 3
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => refreshGpsLocation(false)}
+                        className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 border border-slate-700 transition active:scale-95"
+                      >
+                        {gpsStatus === 'locating' ? '定位中...' : '🔄 重新定位'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSimulateNearby20m}
+                        title="模擬抵達常吃店家門口 20 公尺內，測試 Haversine 距離排序與 Top 3 推薦"
+                        className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-[11px] font-extrabold text-emerald-300 border border-emerald-500/30 transition active:scale-95"
+                      >
+                        🧪 模擬抵達店門口
+                      </button>
+                      {favorites.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowFavManager((v) => !v)}
+                          className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-amber-300 border border-slate-700 transition"
+                        >
+                          ⭐ 常吃庫 ({favorites.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {nearbyFavorites.length > 0 ? (
+                    <div className="flex items-stretch gap-2.5 overflow-x-auto no-scrollbar py-1 scroll-smooth">
+                      {nearbyFavorites.map((fav, idx) => (
+                        <div
+                          key={fav.id}
+                          className="flex-shrink-0 w-64 bg-slate-950/95 border border-emerald-500/40 rounded-2xl p-3 flex flex-col justify-between gap-2 shadow-lg shadow-emerald-500/5"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                #{idx + 1} 距離 {fav.distanceMeters.toFixed(1)}m
+                              </span>
+                              <span className="text-xs font-black text-emerald-400">
+                                {fav.calories} kcal
+                              </span>
+                            </div>
+                            <h4 className="text-xs font-extrabold text-white truncate">
+                              {fav.foodName || fav.name}
+                            </h4>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              P {fav.protein}g · C {fav.carbs}g · F {fav.fat}g
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
+                            <button
+                              type="button"
+                              onClick={() => populateFormWithFood(fav, false)}
+                              className="flex-1 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition"
+                            >
+                              帶入微調
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                quickAddFoodDirectly({
+                                  name: fav.foodName || fav.name,
+                                  portion: fav.portion || '1份',
+                                  calories: fav.calories,
+                                  protein: fav.protein,
+                                  carbs: fav.carbs,
+                                  fat: fav.fat
+                                })
+                              }
+                              className="flex-1 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black transition active:scale-95"
+                            >
+                              ＋紀錄
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs">
+                      <div className="text-slate-400 leading-relaxed">
+                        {gpsStatus === 'denied' || gpsStatus === 'error' ? (
+                          <span>
+                            ⚠️ 尚未開啟定位權限或無法取得座標（網站功能仍可正常使用）。可點擊右側「🧪 模擬抵達店門口」體驗 20m 智慧推薦！
+                          </span>
+                        ) : favorites.length === 0 ? (
+                          <span>
+                            💡 在下方飲食明細點擊「<strong className="text-amber-300">⭐ 存為常吃</strong>」，系統會自動記憶店家 GPS 座標；下次抵達 20 公尺內即自動跳出零秒差推薦！
+                          </span>
+                        ) : (
+                          <span>
+                            📡 目前座標 20 公尺內無常吃店家紀錄（已存 {favorites.length} 筆常吃餐點）。抵達店門口 20m 內將自動顯示最近前 3 筆！
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {showFavManager && favorites.length > 0 && (
+                    <div className="pt-2 border-t border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-amber-300">
+                          ⭐ 已儲存的我的最愛常吃菜單 (共 {favorites.length} 筆)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowFavManager(false)}
+                          className="text-slate-400 hover:text-white text-[11px]"
+                        >
+                          收合 ▲
+                        </button>
+                      </div>
+                      <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar pb-1">
+                        {favorites.map((fav) => {
+                          const dist =
+                            currentCoords && typeof fav.lat === 'number'
+                              ? calculateHaversineDistanceMeters(
+                                  currentCoords.lat,
+                                  currentCoords.lng,
+                                  fav.lat,
+                                  fav.lng
+                                )
+                              : null;
+                          return (
+                            <div
+                              key={fav.id}
+                              className="flex-shrink-0 w-60 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between gap-1.5"
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <span className="text-xs font-extrabold text-white truncate">
+                                  {fav.foodName || fav.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteFavorite(fav.id)}
+                                  className="text-[10px] text-slate-500 hover:text-rose-400"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                {fav.calories} kcal · P {fav.protein}g / C {fav.carbs}g / F {fav.fat}g
+                              </div>
+                              <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                                <span className="text-[10px] text-cyan-400">
+                                  {typeof dist === 'number' && Number.isFinite(dist)
+                                    ? `距離 ${dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}`
+                                    : fav.lat
+                                    ? `已綁定座標`
+                                    : '無座標'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    quickAddFoodDirectly({
+                                      name: fav.foodName || fav.name,
+                                      portion: fav.portion || '1份',
+                                      calories: fav.calories,
+                                      protein: fav.protein,
+                                      carbs: fav.carbs,
+                                      fat: fav.fat
+                                    })
+                                  }
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[10px] font-black"
+                                >
+                                  ＋紀錄
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <DashboardCard
+                  selectedDate={selectedDate}
+                  dailyTotals={dailyTotals}
+                  targets={targets}
+                />
+
+                {/* 功能分頁快速切換鈕 */}
+                <div className="grid grid-cols-3 gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+                  <button
+                    onClick={() => setActiveBottomTab('dashboard')}
+                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 ${
+                      activeBottomTab === 'dashboard'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span>📋</span> 當日紀錄 ({dailyItems.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveBottomTab('presets')}
+                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 ${
+                      activeBottomTab === 'presets'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span>⚡</span> 在地快速菜單
+                  </button>
+                  <button
+                    onClick={() => setActiveBottomTab('add')}
+                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 ${
+                      activeBottomTab === 'add'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span>📸</span> AI拍照 / 手動
+                  </button>
+                </div>
+
+                {/* 在地化快速輸入菜單 */}
+                {activeBottomTab === 'presets' && (
+                  <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-4 space-y-4">
+                    <div>
+                      <h2 className="text-base font-extrabold text-white">⚡ 在地化快速輸入菜單</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        點擊「帶入表單」可微調份量，或點擊「＋直接加」一鍵寫入當日紀錄
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {PRESET_FOOD_CATEGORIES.map((cat) => {
+                        const active = cat.id === activePresetCategory;
+                        return (
+                          <button
+                            key={cat.id}
+                            onClick={() => setActivePresetCategory(cat.id)}
+                            className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition text-center ${
+                              active
+                                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-sm'
+                                : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {cat.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {PRESET_FOOD_CATEGORIES.find((c) => c.id === activePresetCategory)?.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="bg-slate-950/90 border border-slate-800/90 hover:border-slate-700 rounded-2xl p-3.5 flex flex-col gap-2.5 transition"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-extrabold text-white">{item.name}</h3>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 font-bold">
+                                  {item.tag}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 mt-0.5">{item.portion}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-base font-black text-emerald-400">{item.calories}</span>
+                              <span className="text-[11px] text-slate-400 ml-0.5">kcal</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                            <div className="flex items-center gap-3 text-xs font-bold">
+                              <span className="text-cyan-400">蛋白質 {item.protein}g</span>
+                              <span className="text-amber-400">碳水 {item.carbs}g</span>
+                              <span className="text-rose-400">脂肪 {item.fat}g</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => populateFormWithFood(item, false)}
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition active:scale-95"
+                              >
+                                帶入表單
+                              </button>
+                              <button
+                                onClick={() => quickAddFoodDirectly(item)}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold transition active:scale-95"
+                              >
+                                ＋直接加
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* AI 拍照估算 + 手動確認表單 */}
+                {activeBottomTab === 'add' && (
+                  <section ref={formRef} className="space-y-4">
+                    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-500/30 rounded-3xl p-4 space-y-3.5 shadow-xl">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          GEMINI VISION AI
+                        </span>
+                        <h2 className="text-base font-extrabold text-white mt-1">
+                          📸 AI 拍照估算食物營養素
+                        </h2>
+                        <p className="text-xs text-slate-400">
+                          上傳或拍攝食物照片，由 Gemini 辨識份量、蛋白質、碳水、脂肪與總熱量，並自動填入下方表單確認
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <label className="min-h-[54px] rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 transition active:scale-95">
+                          <span>📷 拍照 / 選取照片</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <label className="min-h-[54px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition active:scale-95">
+                          <span>🖼️ 從相簿上傳</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={aiUserHint}
+                          onChange={(e) => setAiUserHint(e.target.value)}
+                          placeholder="選填補充說明（例如：飯吃一半、雞腿去皮）"
+                          className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                        />
+                        {aiImagePayload && (
+                          <button
+                            type="button"
+                            disabled={aiLoading}
+                            onClick={() => triggerGeminiAnalysis()}
+                            className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs disabled:opacity-50"
+                          >
+                            重新辨識
+                          </button>
+                        )}
+                      </div>
+
+                      {aiPreviewUrl && (
+                        <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
+                          <img src={aiPreviewUrl} alt="Food preview" className="w-full h-44 object-cover" />
+                          {aiLoading && (
+                            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+                              <div className="w-9 h-9 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                              <p className="text-xs font-bold text-emerald-300">
+                                Gemini AI 正在分析食材份量與營養素...
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="pt-1 border-t border-slate-800/80">
+                        <p className="text-[11px] text-slate-400 mb-2">
+                          💡 快速測試 AI 辨識結果自動帶入表單：
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            {
+                              foodName: '碳烤雞腿便當（含三樣配菜＋滷蛋）',
+                              portion: '1盒 (約480g)',
+                              calories: 760,
+                              protein: 41,
+                              carbs: 82,
+                              fat: 28,
+                              analysisNotes: 'AI 辨識：帶皮烤雞腿約160g、白飯一碗、高麗菜與青江菜、滷蛋一顆。蛋白質充足！'
+                            },
+                            {
+                              foodName: '嫩煎鮭魚酪梨夏威夷拌飯 (Poke Bowl)',
+                              portion: '1碗 (約430g)',
+                              calories: 640,
+                              protein: 36,
+                              carbs: 64,
+                              fat: 24,
+                              analysisNotes: 'AI 辨識：生食級鮭魚丁140g、毛豆、酪梨片、紫米飯底，富含 Omega-3 與優質增肌營養。'
+                            },
+                            {
+                              foodName: '板腱牛排 8oz 配烤馬鈴薯與花椰菜',
+                              portion: '1份排餐 (約390g)',
+                              calories: 610,
+                              protein: 52,
+                              carbs: 38,
+                              fat: 26,
+                              analysisNotes: 'AI 辨識：低脂板腱牛排約220g，高蛋白質且富含肌酸與鐵質，適合重訓後補充。'
+                            }
+                          ].map((demo, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                populateFormWithFood(demo, true);
+                                showToast(`✨ AI 辨識結果已自動填入下方表單，請確認！`);
+                              }}
+                              className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-semibold transition"
+                            >
+                              ✨ 測試：{demo.foodName.split('（')[0].split(' ')[0]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 💬 文字快速問 AI (Text-to-AI) 區塊 */}
+                    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-4 space-y-3 shadow-xl">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                          TEXT-TO-AI 純文字估算
+                        </span>
+                        <h2 className="text-base font-extrabold text-white mt-1">
+                          💬 文字快速問 AI
+                        </h2>
+                        <p className="text-xs text-slate-400">
+                          忘記拍照時，直接輸入餐點描述（例如：「一碗蝦仁蛋炒飯」），由 Gemini 直接估算三大營養素與總熱量並帶入下方表單
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={aiTextQuery}
+                          onChange={(e) => setAiTextQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              triggerTextToAiAnalysis();
+                            }
+                          }}
+                          placeholder="例如：一碗蝦仁蛋炒飯、大碗牛肉麵加滷蛋..."
+                          className="flex-1 min-h-[48px] bg-slate-950/90 border border-slate-800 rounded-2xl px-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                        />
+                        <button
+                          type="button"
+                          disabled={aiTextLoading}
+                          onClick={() => triggerTextToAiAnalysis()}
+                          className="min-h-[48px] px-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-lg shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50"
+                        >
+                          {aiTextLoading ? 'AI 估算中...' : '🤖 AI 估算'}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center flex-wrap gap-1.5 pt-0.5">
+                        <span className="text-[11px] text-slate-400">熱門快選：</span>
+                        {['一碗蝦仁蛋炒飯', '紅燒牛肉麵加滷蛋', '手工水餃 10顆', '滷肉飯大碗加燙青菜'].map(
+                          (sample) => (
+                            <button
+                              key={sample}
+                              type="button"
+                              onClick={() => {
+                                setAiTextQuery(sample);
+                                triggerTextToAiAnalysis(sample);
+                              }}
+                              className="text-[11px] px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-semibold transition"
+                            >
+                              💬 {sample}
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 手動紀錄與 AI 最終確認表單 */}
+                    <form
+                      onSubmit={handleAddRecordSubmit}
+                      className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 space-y-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-extrabold text-white">
+                          {editingLogId
+                            ? '✏️ 修改餐點紀錄'
+                            : '📝 餐點營養素確認與手動紀錄'}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          {editingLogId && (
+                            <button
+                              type="button"
+                              onClick={handleCancelEditRecord}
+                              className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold transition"
+                            >
+                              ✕ 取消修改
+                            </button>
+                          )}
+                          {formState.aiRecognized && (
+                            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                              ✨ AI 已自動帶入
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {formState.aiNotes && (
+                        <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 leading-relaxed">
+                          <strong>🤖 Gemini 營養分析：</strong> {formState.aiNotes}
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 mb-1.5">用餐時段</label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {MEAL_TYPES.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setFormState((s) => ({ ...s, mealType: m.id }))}
+                              className={`py-2 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-0.5 ${
+                                formState.mealType === m.id
+                                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                                  : 'bg-slate-950 border-slate-800 text-slate-400'
+                              }`}
+                            >
+                              <span>{m.icon}</span>
+                              <span>{m.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-bold text-slate-400 mb-1">食物品項名稱 *</label>
+                          <input
+                            type="text"
+                            required
+                            value={formState.foodName}
+                            onChange={(e) => setFormState((s) => ({ ...s, foodName: e.target.value }))}
+                            placeholder="例如：舒肥雞胸肉便當、鮪魚蛋餅"
+                            className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-400 mb-1">估計份量</label>
+                          <input
+                            type="text"
+                            value={formState.portion}
+                            onChange={(e) => setFormState((s) => ({ ...s, portion: e.target.value }))}
+                            placeholder="例如：1份 / 200g"
+                            className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
+                          />
+                        </div>
+                      </div>
+
+                      {baseFormValues && (
+                        <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800">
+                          <span className="text-xs font-bold text-slate-400">快速調整份量倍率：</span>
+                          <div className="flex items-center gap-1.5">
+                            {[0.5, 1, 1.5, 2].map((scale) => (
+                              <button
+                                key={scale}
+                                type="button"
+                                onClick={() => handleScaleChange(scale)}
+                                className={`px-3 py-1 rounded-lg text-xs font-extrabold transition ${
+                                  portionScale === scale
+                                    ? 'bg-emerald-500 text-slate-950'
+                                    : 'bg-slate-800 text-slate-300'
+                                }`}
+                              >
+                                {scale}x
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="bg-slate-950 p-3 rounded-2xl border border-cyan-500/30">
+                          <label className="block text-[11px] font-extrabold text-cyan-400 mb-1">蛋白質 (g)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            required
+                            value={formState.protein}
+                            onChange={(e) => setFormState((s) => ({ ...s, protein: e.target.value }))}
+                            placeholder="0"
+                            className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="bg-slate-950 p-3 rounded-2xl border border-amber-500/30">
+                          <label className="block text-[11px] font-extrabold text-amber-400 mb-1">碳水化合物 (g)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            required
+                            value={formState.carbs}
+                            onChange={(e) => setFormState((s) => ({ ...s, carbs: e.target.value }))}
+                            placeholder="0"
+                            className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="bg-slate-950 p-3 rounded-2xl border border-rose-500/30">
+                          <label className="block text-[11px] font-extrabold text-rose-400 mb-1">脂肪 (g)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            required
+                            value={formState.fat}
+                            onChange={(e) => setFormState((s) => ({ ...s, fat: e.target.value }))}
+                            placeholder="0"
+                            className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-500/30">
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[11px] font-extrabold text-emerald-400">總熱量 (kcal)</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const p = Number(formState.protein) || 0;
+                                const c = Number(formState.carbs) || 0;
+                                const f = Number(formState.fat) || 0;
+                                setFormState((s) => ({
+                                  ...s,
+                                  calories: String(Math.round(p * 4 + c * 4 + f * 9))
+                                }));
+                              }}
+                              className="text-[10px] text-emerald-300 underline"
+                            >
+                              自動算
+                            </button>
+                          </div>
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            required
+                            value={formState.calories}
+                            onChange={(e) => setFormState((s) => ({ ...s, calories: e.target.value }))}
+                            placeholder="自動計算"
+                            className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full min-h-[54px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 transition active:scale-95"
+                      >
+                        {editingLogId
+                          ? `💾 儲存修改並同步至 ${selectedDate}`
+                          : `✅ 確認並加入 ${selectedDate} 飲食紀錄`}
+                      </button>
+                    </form>
+                  </section>
+                )}
+
+                {/* 當日飲食紀錄明細 */}
+                {activeBottomTab === 'dashboard' && (
+                  <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-4 space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-base font-extrabold text-white">
+                          🍽️ {selectedDate} 攝取紀錄明細
+                        </h2>
+                        <p className="text-xs text-slate-400">
+                          共 {dailyItems.length} 筆餐點 · 總計 {Math.round(dailyTotals.calories)} kcal
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setActiveBottomTab('presets')}
+                          className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-slate-700"
+                        >
+                          ⚡ 快速菜單
+                        </button>
+                        <button
+                          onClick={() => setActiveBottomTab('add')}
+                          className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-extrabold text-slate-950"
+                        >
+                          ＋ 新增餐點
+                        </button>
+                      </div>
+                    </div>
+
+                    {dailyItems.length === 0 ? (
+                      <div className="py-10 text-center space-y-3 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
+                        <div className="text-3xl">🥩</div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-slate-300">這天還沒有任何飲食紀錄</p>
+                          <p className="text-xs text-slate-500">
+                            使用「在地快速菜單」或「AI 拍照估算」開始累積今日增肌營養！
+                          </p>
+                        </div>
+                        <div className="flex justify-center gap-2 pt-1">
+                          <button
+                            onClick={() => setActiveBottomTab('presets')}
+                            className="px-4 py-2.5 rounded-xl bg-slate-800 text-emerald-400 text-xs font-extrabold"
+                          >
+                            ⚡ 開啟快速菜單
+                          </button>
+                          <button
+                            onClick={() => setActiveBottomTab('add')}
+                            className="px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold"
+                          >
+                            📸 AI 拍照估算
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {dailyItems.map((item) => {
+                          const mealMeta = MEAL_TYPES.find((m) => m.id === item.mealType) || MEAL_TYPES[1];
+                          return (
+                            <div
+                              key={item.id}
+                              className="bg-slate-950/90 border border-slate-800/90 rounded-2xl p-3.5 flex flex-col gap-2"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 font-bold">
+                                      {mealMeta.icon} {mealMeta.label}
+                                    </span>
+                                    {item.aiRecognized && (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                                        ✨ Gemini AI
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] text-slate-500">{item.createdAt}</span>
+                                  </div>
+                                  <h3 className="text-sm font-extrabold text-white pt-0.5">{item.foodName}</h3>
+                                  <p className="text-xs text-slate-400">{item.portion}</p>
+                                </div>
+
+                                <div className="text-right flex flex-col items-end">
+                                  <div>
+                                    <span className="text-base font-black text-emerald-400">{item.calories}</span>
+                                    <span className="text-[11px] text-slate-400 ml-0.5">kcal</span>
+                                  </div>
+                                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap justify-end">
+                                    <button
+                                      type="button"
+                                      disabled={savingFavId === item.id}
+                                      onClick={() => handleSaveAsFavorite(item)}
+                                      title="儲存為常吃餐點並於背景綁定當下 GPS 經緯度"
+                                      className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-[11px] text-amber-300 font-extrabold transition active:scale-95 disabled:opacity-50"
+                                    >
+                                      {savingFavId === item.id ? '定位儲存中...' : '⭐ 存為常吃'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEditRecord(item)}
+                                      title="修改此筆餐點名稱、份量與營養素"
+                                      className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-[11px] text-cyan-300 font-extrabold transition active:scale-95"
+                                    >
+                                      ✏️ 修改
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteRecord(item.id)}
+                                      className="text-[11px] text-slate-500 hover:text-rose-400 font-semibold px-1"
+                                    >
+                                      刪除
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/70 text-xs font-bold">
+                                <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                  <span className="text-slate-400">蛋白質</span>
+                                  <span className="text-cyan-400">{item.protein}g</span>
+                                </div>
+                                <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                  <span className="text-slate-400">碳水</span>
+                                  <span className="text-amber-400">{item.carbs}g</span>
+                                </div>
+                                <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                  <span className="text-slate-400">脂肪</span>
+                                  <span className="text-rose-400">{item.fat}g</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+                )}
+              </main>
+
+              {/* 手機底部大按鈕導覽列 */}
+              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#070B12]/95 backdrop-blur-xl border-t border-slate-800/90 px-4 py-2">
+                <div className="max-w-lg mx-auto grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => setActiveBottomTab('dashboard')}
+                    className={`min-h-[52px] rounded-2xl flex flex-col items-center justify-center gap-0.5 font-extrabold text-xs transition ${
+                      activeBottomTab === 'dashboard'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-base">📊</span>
+                    <span>當日儀表板</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveBottomTab('presets')}
+                    className={`min-h-[52px] rounded-2xl flex flex-col items-center justify-center gap-0.5 font-extrabold text-xs transition ${
+                      activeBottomTab === 'presets'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-base">🍱</span>
+                    <span>快速輸入菜單</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveBottomTab('add')}
+                    className={`min-h-[52px] rounded-2xl flex flex-col items-center justify-center gap-0.5 font-extrabold text-xs transition ${
+                      activeBottomTab === 'add'
+                        ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20'
+                        : 'bg-slate-800/90 text-emerald-300 border border-slate-700'
+                    }`}
+                  >
+                    <span className="text-base">📸</span>
+                    <span>AI拍照 / 紀錄</span>
+                  </button>
+                </div>
+              </nav>
+            </div>
+          )}
+
+          {showOnboarding && user && (
+            <OnboardingModal
+              initialProfile={profile}
+              canClose={Boolean(profile)}
+              onClose={() => setShowOnboarding(false)}
+              onSave={async (newProfile) => {
+                const saved = await saveUserProfile(user.uid, newProfile);
+                setProfile(saved);
+                setShowOnboarding(false);
+                showToast('🎯 增肌目標與 BMR / TDEE 已更新並同步！');
+              }}
+            />
+          )}
+
+          {showCloudModal && (
+            <CloudConfigModal
+              onClose={() => setShowCloudModal(false)}
+              onSaved={() => {
+                const fb = initFirebaseClient();
+                setIsCloudConnected(Boolean(fb?.isCloud));
+                setShowCloudModal(false);
+                showToast('已儲存 API 與雲端設定！');
+              }}
+            />
+          )}
+
+          {showCalendarModal && (
+            <CalendarPickerModal
+              selectedDate={selectedDate}
+              allLogsCache={allLogsCache}
+              dailyItems={dailyItems}
+              targets={targets}
+              onSelectDate={(newDateStr) => {
+                setSelectedDate(newDateStr);
+                setShowCalendarModal(false);
+              }}
+              onClose={() => setShowCalendarModal(false)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function CalendarPickerModal({
+      selectedDate,
+      allLogsCache,
+      dailyItems,
+      targets,
+      onSelectDate,
+      onClose
+    }) {
+      const initialDateObj = new Date(selectedDate + 'T00:00:00');
+      const [viewYear, setViewYear] = useState(initialDateObj.getFullYear());
+      const [viewMonth, setViewMonth] = useState(initialDateObj.getMonth()); // 0 ~ 11
+
+      const todayStr = formatDateKey(new Date());
+
+      const monthCells = useMemo(() => {
+        const firstDay = new Date(viewYear, viewMonth, 1);
+        const startWeekday = firstDay.getDay(); // 0 (Sun) ~ 6 (Sat)
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+        const cells = [];
+        for (let i = 0; i < startWeekday; i++) {
+          cells.push(null);
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+          const d = new Date(viewYear, viewMonth, day);
+          const dateStr = formatDateKey(d);
+          const logs = dateStr === selectedDate ? dailyItems : allLogsCache[dateStr] || [];
+          const totalCal = logs.reduce((s, item) => s + (Number(item.calories) || 0), 0);
+          const totalPro = logs.reduce((s, item) => s + (Number(item.protein) || 0), 0);
+          cells.push({
+            day,
+            dateStr,
+            isToday: dateStr === todayStr,
+            isSelected: dateStr === selectedDate,
+            hasLogs: logs.length > 0,
+            isGoalMet:
+              logs.length > 0 &&
+              totalCal >= targets.targetCalories * 0.85 &&
+              totalPro >= targets.protein * 0.85
+          });
+        }
+        return cells;
+      }, [viewYear, viewMonth, selectedDate, dailyItems, allLogsCache, targets, todayStr]);
+
+      const handlePrevMonth = () => {
+        if (viewMonth === 0) {
+          setViewYear((y) => y - 1);
+          setViewMonth(11);
+        } else {
+          setViewMonth((m) => m - 1);
+        }
+      };
+
+      const handleNextMonth = () => {
+        if (viewMonth === 11) {
+          setViewYear((y) => y + 1);
+          setViewMonth(0);
+        } else {
+          setViewMonth((m) => m + 1);
+        }
+      };
+
+      return (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#0E1525] border border-slate-700 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-white">📅 選擇飲食紀錄日期</h3>
+                <p className="text-xs text-slate-400">點擊任意日期切換並查看當日營養總和</p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 月份切換列 */}
+            <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-2xl border border-slate-800">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 transition active:scale-95"
+              >
+                ◀ 上個月
+              </button>
+              <span className="text-sm font-black text-white">
+                {viewYear} 年 {viewMonth + 1} 月
+              </span>
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 transition active:scale-95"
+              >
+                下個月 ▶
+              </button>
+            </div>
+
+            {/* 星期標題 */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {WEEKDAY_NAMES.map((w) => (
+                <div key={w} className="text-[11px] font-bold text-slate-500 py-1">
+                  {w}
+                </div>
+              ))}
+
+              {/* 日期格子 */}
+              {monthCells.map((cell, idx) => {
+                if (!cell) {
+                  return <div key={`empty_${idx}`} className="h-11" />;
+                }
+                return (
+                  <button
+                    key={cell.dateStr}
+                    type="button"
+                    onClick={() => onSelectDate(cell.dateStr)}
+                    className={`h-11 rounded-xl flex flex-col items-center justify-center border transition active:scale-95 ${
+                      cell.isSelected
+                        ? 'bg-emerald-500 text-slate-950 border-emerald-300 font-black shadow-lg shadow-emerald-500/25'
+                        : cell.isToday
+                        ? 'bg-slate-800 text-emerald-300 border-emerald-500/50 font-extrabold'
+                        : 'bg-slate-950/70 hover:bg-slate-800/80 text-slate-200 border-slate-800/70 font-bold'
+                    }`}
+                  >
+                    <span className="text-xs leading-none">{cell.day}</span>
+                    <div className="mt-1 h-1.5 flex items-center justify-center">
+                      {cell.hasLogs && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            cell.isSelected
+                              ? 'bg-slate-950'
+                              : cell.isGoalMet
+                              ? 'bg-emerald-400'
+                              : 'bg-amber-400'
+                          }`}
+                        />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 圖例與快速跳回今天 */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+              <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1">
+                  <i className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> 增肌達標
+                </span>
+                <span className="flex items-center gap-1">
+                  <i className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> 有紀錄
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectDate(todayStr)}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-extrabold transition"
+              >
+                跳回今天 ({todayStr})
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DashboardCard({ selectedDate, dailyTotals, targets }) {
+      const calPercent = Math.min(
+        Math.round((dailyTotals.calories / Math.max(targets.targetCalories, 1)) * 100),
+        100
+      );
+      const proPercent = Math.min(
+        Math.round((dailyTotals.protein / Math.max(targets.protein, 1)) * 100),
+        100
+      );
+      const carbPercent = Math.min(
+        Math.round((dailyTotals.carbs / Math.max(targets.carbs, 1)) * 100),
+        100
+      );
+      const fatPercent = Math.min(
+        Math.round((dailyTotals.fat / Math.max(targets.fat, 1)) * 100),
+        100
+      );
+
+      const pCal = dailyTotals.protein * 4;
+      const cCal = dailyTotals.carbs * 4;
+      const fCal = dailyTotals.fat * 9;
+      const macroCalSum = Math.max(pCal + cCal + fCal, 1);
+
+      const pRatio = dailyTotals.calories > 0 ? Math.round((pCal / macroCalSum) * 100) : 0;
+      const cRatio = dailyTotals.calories > 0 ? Math.round((cCal / macroCalSum) * 100) : 0;
+      const fRatio = dailyTotals.calories > 0 ? Math.max(100 - pRatio - cRatio, 0) : 0;
+
+      const radius = 52;
+      const circumference = 2 * Math.PI * radius;
+      const pStroke = (pRatio / 100) * circumference;
+      const cStroke = (cRatio / 100) * circumference;
+      const fStroke = (fRatio / 100) * circumference;
+
+      const remainingCalories = targets.targetCalories - Math.round(dailyTotals.calories);
+
+      return (
+        <section className="bg-gradient-to-b from-slate-900 to-[#0B1220] border border-slate-800/90 rounded-3xl p-4 shadow-2xl space-y-4">
+          <div className="grid grid-cols-3 gap-2 bg-slate-950/90 p-2.5 rounded-2xl border border-slate-800/80 text-center">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block">BMR 基礎代謝</span>
+              <span className="text-sm font-black text-slate-200">{targets.bmr}</span>
+              <span className="text-[10px] text-slate-500 ml-0.5">kcal</span>
+            </div>
+            <div className="border-x border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400 block">TDEE 每日消耗</span>
+              <span className="text-sm font-black text-cyan-400">{targets.tdee}</span>
+              <span className="text-[10px] text-slate-500 ml-0.5">kcal</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-emerald-400 block">
+                增肌目標 (+{targets.surplus})
+              </span>
+              <span className="text-sm font-black text-emerald-400">{targets.targetCalories}</span>
+              <span className="text-[10px] text-slate-500 ml-0.5">kcal</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="relative w-32 h-32 flex-shrink-0 flex items-center justify-center">
+              <svg className="w-32 h-32 -rotate-90" viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r={radius} fill="transparent" stroke="#1E293B" strokeWidth="14" />
+                {dailyTotals.calories > 0 && (
+                  <>
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r={radius}
+                      fill="transparent"
+                      stroke="#06B6D4"
+                      strokeWidth="14"
+                      strokeDasharray={`${pStroke} ${circumference}`}
+                      strokeDashoffset={0}
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r={radius}
+                      fill="transparent"
+                      stroke="#F59E0B"
+                      strokeWidth="14"
+                      strokeDasharray={`${cStroke} ${circumference}`}
+                      strokeDashoffset={-pStroke}
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r={radius}
+                      fill="transparent"
+                      stroke="#F43F5E"
+                      strokeWidth="14"
+                      strokeDasharray={`${fStroke} ${circumference}`}
+                      strokeDashoffset={-(pStroke + cStroke)}
+                    />
+                  </>
+                )}
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-[10px] font-bold text-slate-400">熱量達標率</span>
+                <span className="text-xl font-black text-white">{calPercent}%</span>
+                <span className="text-[10px] font-bold text-emerald-400">
+                  {Math.round(dailyTotals.calories)} kcal
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2.5">
+              <div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-400">{selectedDate} 熱量進度</span>
+                  <span className={`font-extrabold ${remainingCalories >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {remainingCalories >= 0
+                      ? `還需 ${remainingCalories} kcal`
+                      : `超標 ${Math.abs(remainingCalories)} kcal`}
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden mt-1 border border-slate-800">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-lime-400 rounded-full transition-all duration-500"
+                    style={{ width: `${calPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2 text-center">
+                  <span className="text-[10px] text-cyan-400 font-bold block">● 蛋白質佔比</span>
+                  <span className="text-xs font-black text-white">{pRatio}%</span>
+                </div>
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2 text-center">
+                  <span className="text-[10px] text-amber-400 font-bold block">● 碳水佔比</span>
+                  <span className="text-xs font-black text-white">{cRatio}%</span>
+                </div>
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2 text-center">
+                  <span className="text-[10px] text-rose-400 font-bold block">● 脂肪佔比</span>
+                  <span className="text-xs font-black text-white">{fRatio}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2 border-t border-slate-800/80">
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="font-extrabold text-cyan-400">🥩 蛋白質 (Protein)</span>
+                <span className="font-bold text-slate-300">
+                  <strong className="text-white">{dailyTotals.protein.toFixed(1)}</strong> / {targets.protein} g ({proPercent}%)
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-500 to-sky-400 rounded-full transition-all duration-500"
+                  style={{ width: `${proPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="font-extrabold text-amber-400">🍚 碳水化合物 (Carbs)</span>
+                <span className="font-bold text-slate-300">
+                  <strong className="text-white">{dailyTotals.carbs.toFixed(1)}</strong> / {targets.carbs} g ({carbPercent}%)
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
+                  style={{ width: `${carbPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="font-extrabold text-rose-400">🥑 脂肪 (Fat)</span>
+                <span className="font-bold text-slate-300">
+                  <strong className="text-white">{dailyTotals.fat.toFixed(1)}</strong> / {targets.fat} g ({fatPercent}%)
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-rose-500 to-pink-400 rounded-full transition-all duration-500"
+                  style={{ width: `${fatPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function OnboardingModal({ initialProfile, canClose, onClose, onSave }) {
+      const [gender, setGender] = useState(initialProfile?.gender || 'male');
+      const [age, setAge] = useState(initialProfile?.age || 25);
+      const [height, setHeight] = useState(initialProfile?.height || 175);
+      const [weight, setWeight] = useState(initialProfile?.weight || 70);
+      const [activityLevel, setActivityLevel] = useState(initialProfile?.activityLevel || 1.55);
+      const [surplus, setSurplus] = useState(initialProfile?.surplus || 350);
+
+      const previewTargets = useMemo(() => {
+        return calculateBulkingNutrition({ gender, age, height, weight, activityLevel, surplus });
+      }, [gender, age, height, weight, activityLevel, surplus]);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({
+          gender,
+          age: Number(age),
+          height: Number(height),
+          weight: Number(weight),
+          activityLevel: Number(activityLevel),
+          surplus: Number(surplus),
+          targets: previewTargets
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#0E1525] border border-slate-700/90 rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  ONBOARDING 初始設定
+                </span>
+                <h2 className="text-lg font-black text-white mt-1.5">建立你的專屬增肌營養目標</h2>
+                <p className="text-xs text-slate-400">
+                  根據身高、體重、年齡、性別與活動量，自動計算 BMR、TDEE 與增肌三大營養素目標
+                </p>
+              </div>
+              {canClose && (
+                <button onClick={onClose} className="text-slate-400 hover:text-white text-sm font-bold px-2 py-1">
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">生理性別</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setGender('male')}
+                    className={`h-12 rounded-2xl font-extrabold text-sm border transition ${
+                      gender === 'male'
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    ♂ 男性 (Male)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender('female')}
+                    className={`h-12 rounded-2xl font-extrabold text-sm border transition ${
+                      gender === 'female'
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    ♀ 女性 (Female)
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">身高 (cm)</label>
+                  <input
+                    type="number"
+                    required
+                    min="120"
+                    max="230"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">體重 (kg)</label>
+                  <input
+                    type="number"
+                    required
+                    step="0.1"
+                    min="35"
+                    max="200"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">年齡 (歲)</label>
+                  <input
+                    type="number"
+                    required
+                    min="12"
+                    max="100"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">每週活動量與訓練強度</label>
+                <div className="space-y-1.5">
+                  {ACTIVITY_LEVELS.map((act) => (
+                    <button
+                      key={act.value}
+                      type="button"
+                      onClick={() => setActivityLevel(act.value)}
+                      className={`w-full text-left p-2.5 rounded-xl border transition flex items-center justify-between ${
+                        Number(activityLevel) === act.value
+                          ? 'bg-emerald-500/15 border-emerald-400 text-white'
+                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      <div>
+                        <div className="text-xs font-extrabold">{act.label}</div>
+                        <div className="text-[11px] text-slate-400">{act.desc}</div>
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          Number(activityLevel) === act.value
+                            ? 'border-emerald-400 bg-emerald-400 text-slate-950'
+                            : 'border-slate-600'
+                        }`}
+                      >
+                        {Number(activityLevel) === act.value && <span className="text-[10px] font-black">✓</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">增肌熱量盈餘策略</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {SURPLUS_MODES.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setSurplus(m.surplus)}
+                      className={`p-2 rounded-xl border text-center transition ${
+                        Number(surplus) === m.surplus
+                          ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      <div className="text-xs font-black">+{m.surplus} kcal</div>
+                      <div className="text-[10px] opacity-80">{m.name.split(' ')[0]}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-950 border border-emerald-500/40 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+                  <span className="text-slate-400 font-bold">
+                    BMR: <strong className="text-white">{previewTargets.bmr}</strong> kcal
+                  </span>
+                  <span className="text-slate-400 font-bold">
+                    TDEE: <strong className="text-cyan-400">{previewTargets.tdee}</strong> kcal
+                  </span>
+                  <span className="text-emerald-400 font-black">
+                    增肌目標: {previewTargets.targetCalories} kcal
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-slate-900 rounded-xl p-2">
+                    <span className="text-[10px] font-bold text-cyan-400 block">目標蛋白質</span>
+                    <span className="text-base font-black text-white">{previewTargets.protein}g</span>
+                  </div>
+                  <div className="bg-slate-900 rounded-xl p-2">
+                    <span className="text-[10px] font-bold text-amber-400 block">目標碳水</span>
+                    <span className="text-base font-black text-white">{previewTargets.carbs}g</span>
+                  </div>
+                  <div className="bg-slate-900 rounded-xl p-2">
+                    <span className="text-[10px] font-bold text-rose-400 block">目標脂肪</span>
+                    <span className="text-base font-black text-white">{previewTargets.fat}g</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20"
+              >
+                🚀 儲存目標並進入增肌儀表板
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function AuthView({ isCloudConnected, onOpenCloudSettings, onLoginSuccess, showToast }) {
+      const [isRegister, setIsRegister] = useState(false);
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [displayName, setDisplayName] = useState('');
+      const [submitting, setSubmitting] = useState(false);
+
+      const handleAccountSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+          const fb = initFirebaseClient();
+          if (fb?.auth) {
+            if (isRegister) {
+              const cred = await createUserWithEmailAndPassword(fb.auth, email, password);
+              if (displayName.trim()) {
+                await updateProfile(cred.user, { displayName: displayName.trim() }).catch(() => {});
+              }
+              onLoginSuccess({
+                uid: cred.user.uid,
+                email: cred.user.email,
+                displayName: displayName.trim() || cred.user.email.split('@')[0],
+                mode: 'firebase'
+              });
+            } else {
+              const cred = await signInWithEmailAndPassword(fb.auth, email, password);
+              onLoginSuccess({
+                uid: cred.user.uid,
+                email: cred.user.email,
+                displayName: cred.user.displayName || cred.user.email.split('@')[0],
+                mode: 'firebase'
+              });
+            }
+          } else {
+            const cleanEmail = email.trim().toLowerCase();
+            const uid = 'user_' + btoa(encodeURIComponent(cleanEmail)).replace(/=/g, '');
+            onLoginSuccess({
+              uid,
+              email: cleanEmail,
+              displayName: displayName.trim() || cleanEmail.split('@')[0] || '健身者',
+              mode: 'local-bound'
+            });
+          }
+        } catch (err) {
+          showToast(`登入/註冊失敗：${err.message}`, 'error');
+        } finally {
+          setSubmitting(false);
+        }
+      };
+
+      const handleGoogleLogin = async () => {
+        const fb = initFirebaseClient();
+        if (!fb?.auth) {
+          onOpenCloudSettings();
+          showToast('請先在設定中貼上 Firebase Config 以啟用 Google 登入，或直接使用下方帳號登入', 'error');
+          return;
+        }
+        try {
+          const provider = new GoogleAuthProvider();
+          const cred = await signInWithPopup(fb.auth, provider);
+          onLoginSuccess({
+            uid: cred.user.uid,
+            email: cred.user.email,
+            displayName: cred.user.displayName || 'Google 健身會員',
+            mode: 'firebase'
+          });
+        } catch (err) {
+          showToast(`Google 登入失敗：${err.message}`, 'error');
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center px-4 py-8">
+          <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 mx-auto flex items-center justify-center text-slate-950 font-black text-2xl shadow-xl shadow-emerald-500/20">
+                💪
+              </div>
+              <h1 className="text-2xl font-black tracking-tight text-white">HYPERBULK 增肌營養追蹤器</h1>
+              <p className="text-xs text-slate-400">
+                自動計算 BMR & TDEE · Gemini AI 拍照辨識 · 台灣在地飲食快速紀錄
+              </p>
+            </div>
+
+            <form onSubmit={handleAccountSubmit} className="space-y-3.5">
+              {isRegister && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">你的健身暱稱</label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="例如：阿傑、增肌戰士"
+                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">電子信箱 (綁定帳號資料)</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="athlete@example.com"
+                  className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">密碼</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="至少 6 位字元"
+                  className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/25 transition active:scale-95"
+              >
+                {isRegister ? '建立增肌帳號並開始設定' : '登入增肌追蹤器'}
+              </button>
+            </form>
+
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={() => setIsRegister(!isRegister)}
+                className="text-emerald-400 font-bold hover:underline"
+              >
+                {isRegister ? '已有帳號？點此登入' : '首次使用？點此註冊新帳號'}
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenCloudSettings}
+                className="text-slate-400 hover:text-white font-semibold"
+              >
+                🔑 API / 雲端設定
+              </button>
+            </div>
+
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-slate-800"></div>
+              <span className="flex-shrink mx-3 text-[11px] text-slate-500 font-bold">快速登入選項</span>
+              <div className="flex-grow border-t border-slate-800"></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="min-h-[48px] rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 flex items-center justify-center gap-2 transition"
+              >
+                <span>🌐</span> Google 登入
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  onLoginSuccess({
+                    uid: 'demo_pro_lifter',
+                    email: 'pro@hyperbulk.tw',
+                    displayName: '增肌體驗會員',
+                    mode: isCloudConnected ? 'firebase' : 'local-bound'
+                  })
+                }
+                className="min-h-[48px] rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-extrabold text-emerald-300 flex items-center justify-center gap-1.5 transition"
+              >
+                <span>⚡</span> 一鍵快速體驗登入
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CloudConfigModal({ onClose, onSaved }) {
+      const [geminiKey, setGeminiKey] = useState(() => getSavedGeminiKey());
+      const [firebaseJson, setFirebaseJson] = useState(() => {
+        const cfg = getSavedFirebaseConfig();
+        return cfg ? JSON.stringify(cfg, null, 2) : '';
+      });
+      const [error, setError] = useState('');
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        setError('');
+        saveGeminiKey(geminiKey);
+        if (firebaseJson.trim()) {
+          try {
+            const parsed = JSON.parse(firebaseJson);
+            if (!parsed.apiKey || !parsed.projectId) {
+              setError('Firebase 設定需包含 apiKey 與 projectId 欄位');
+              return;
+            }
+            saveFirebaseConfig(parsed);
+          } catch (err) {
+            setError('Firebase Config JSON 格式不正確，請確認為合法 JSON 物件');
+            return;
+          }
+        } else {
+          saveFirebaseConfig(null);
+        }
+        onSaved();
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0E1525] border border-slate-700 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-white">🔑 設定 Gemini API 與 Firebase 雲端資料庫</h3>
+              <button onClick={onClose} className="text-slate-400 hover:text-white font-bold">✕</button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-emerald-400 mb-1">
+                  Gemini API Key (用於 AI 食物拍照辨識)
+                </label>
+                <input
+                  type="password"
+                  value={geminiKey}
+                  onChange={(e) => setGeminiKey(e.target.value)}
+                  placeholder="貼上你的 AIzaSy... Gemini API Key"
+                  className="w-full h-11 bg-slate-950 border border-slate-800 rounded-xl px-3 text-xs text-white focus:outline-none focus:border-emerald-400"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  填入後點擊「拍照/選取照片」即可即時呼叫 Gemini 2.5 Flash 辨識食物份量與三大營養素。
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-cyan-400 mb-1">
+                  Firebase Config JSON (選填，用於跨裝置 Firestore 雲端同步)
+                </label>
+                <textarea
+                  rows={5}
+                  value={firebaseJson}
+                  onChange={(e) => setFirebaseJson(e.target.value)}
+                  placeholder={`{\n  "apiKey": "AIza...",\n  "authDomain": "your-app.firebaseapp.com",\n  "projectId": "your-app"\n}`}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              {error && <p className="text-xs font-bold text-rose-400">{error}</p>}
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 h-11 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 h-11 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black"
+                >
+                  儲存設定
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
