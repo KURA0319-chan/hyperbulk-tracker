@@ -284,6 +284,179 @@
       return { bmr, tdee, surplus: sur, targetCalories, protein, carbs, fat };
     }
 
+    /**
+     * 隱藏快充零食清單與智慧達標建議系統 (Smart Macro Suggestions)
+     * 根據當日剩餘的蛋白質、碳水與熱量缺口，動態推薦最適合的快充單品或組合
+     */
+    const SMART_BOOSTER_SNACKS = [
+      {
+        id: 'boost-1-egg',
+        name: '1顆茶葉蛋',
+        portion: '1顆 (55g)',
+        calories: 75,
+        protein: 7,
+        carbs: 0.6,
+        fat: 5
+      },
+      {
+        id: 'boost-2-eggs',
+        name: '2顆茶葉蛋',
+        portion: '2顆 (110g)',
+        calories: 150,
+        protein: 14,
+        carbs: 1.2,
+        fat: 10
+      },
+      {
+        id: 'boost-soymilk',
+        name: '1杯無糖豆漿',
+        portion: '1杯 (450ml)',
+        calories: 145,
+        protein: 15.3,
+        carbs: 6.3,
+        fat: 6.5
+      },
+      {
+        id: 'boost-tuna-can',
+        name: '1罐水煮鮪魚罐頭',
+        portion: '1罐瀝乾 (130g)',
+        calories: 135,
+        protein: 30,
+        carbs: 0,
+        fat: 1.5
+      },
+      {
+        id: 'boost-banana',
+        name: '1根中型香蕉',
+        portion: '1根 (約120g)',
+        calories: 105,
+        protein: 1.3,
+        carbs: 27,
+        fat: 0.4
+      },
+      {
+        id: 'boost-sweet-potato',
+        name: '1條中型地瓜',
+        portion: '1條蒸烤 (165g)',
+        calories: 185,
+        protein: 2.6,
+        carbs: 42,
+        fat: 0.3
+      },
+      {
+        id: 'boost-soy-sweetpotato',
+        name: '1杯無糖豆漿＋1條中型地瓜',
+        portion: '1杯豆漿 + 1條地瓜',
+        calories: 330,
+        protein: 17.9,
+        carbs: 48.3,
+        fat: 6.8
+      },
+      {
+        id: 'boost-egg-banana',
+        name: '2顆茶葉蛋＋1根香蕉',
+        portion: '2顆茶葉蛋 + 1根香蕉',
+        calories: 255,
+        protein: 15.3,
+        carbs: 28.2,
+        fat: 10.4
+      },
+      {
+        id: 'boost-tuna-pancake',
+        name: '鮪魚蛋餅',
+        portion: '1份 (約170g)',
+        calories: 345,
+        protein: 16,
+        carbs: 32,
+        fat: 17
+      },
+      {
+        id: 'boost-turkey-rice-egg',
+        name: '火雞肉飯＋1顆茶葉蛋',
+        portion: '1碗火雞肉飯 + 1顆茶葉蛋',
+        calories: 505,
+        protein: 31,
+        carbs: 52.6,
+        fat: 19
+      },
+      {
+        id: 'boost-chicken-bento',
+        name: '舒肥雞胸肉便當',
+        portion: '1盒 (約420g)',
+        calories: 520,
+        protein: 42,
+        carbs: 62,
+        fat: 11
+      }
+    ];
+
+    function generateSmartMacroSuggestion(dailyTotals, targets) {
+      const proGap = Math.max(0, Math.round((targets.protein - (dailyTotals.protein || 0)) * 10) / 10);
+      const carbGap = Math.max(0, Math.round((targets.carbs - (dailyTotals.carbs || 0)) * 10) / 10);
+      const calGap = Math.max(0, Math.round(targets.targetCalories - (dailyTotals.calories || 0)));
+
+      if (proGap <= 3 && carbGap <= 8 && calGap <= 80) {
+        return {
+          isGoalMet: true,
+          proGap: 0,
+          carbGap: 0,
+          calGap: 0,
+          title: '🏆 今日增肌營養已完美達標！',
+          message: '太猛了！您的蛋白質、碳水化合物與總熱量皆已達標，肌肉正處於最佳合成狀態，好好休息迎接下次訓練！',
+          recommendedItem: null
+        };
+      }
+
+      let picked = SMART_BOOSTER_SNACKS[6]; // 預設：1杯無糖豆漿＋1條中型地瓜
+
+      if (proGap > 5 && carbGap > 15) {
+        if (proGap >= 35 && carbGap >= 45 && calGap >= 420) {
+          picked = SMART_BOOSTER_SNACKS[10]; // 舒肥雞胸肉便當
+        } else if (proGap >= 24 && carbGap >= 40 && calGap >= 400) {
+          picked = SMART_BOOSTER_SNACKS[9]; // 火雞肉飯＋1顆茶葉蛋
+        } else if (proGap >= 12 && carbGap >= 32) {
+          picked = SMART_BOOSTER_SNACKS[6]; // 1杯無糖豆漿＋1條中型地瓜
+        } else if (proGap >= 12 && carbGap >= 20 && calGap < 300) {
+          picked = SMART_BOOSTER_SNACKS[7]; // 2顆茶葉蛋＋1根香蕉
+        } else {
+          picked = SMART_BOOSTER_SNACKS[8]; // 鮪魚蛋餅
+        }
+      } else if (proGap > 3) {
+        if (proGap >= 22) {
+          picked = SMART_BOOSTER_SNACKS[3]; // 1罐水煮鮪魚罐頭
+        } else if (proGap >= 11) {
+          picked = calGap <= 155 ? SMART_BOOSTER_SNACKS[2] : SMART_BOOSTER_SNACKS[1]; // 1杯無糖豆漿 或 2顆茶葉蛋
+        } else {
+          picked = SMART_BOOSTER_SNACKS[0]; // 1顆茶葉蛋
+        }
+      } else if (carbGap > 8) {
+        if (carbGap >= 33) {
+          picked = SMART_BOOSTER_SNACKS[5]; // 1條中型地瓜
+        } else {
+          picked = SMART_BOOSTER_SNACKS[4]; // 1根中型香蕉
+        }
+      } else {
+        picked = SMART_BOOSTER_SNACKS[2]; // 1杯無糖豆漿
+      }
+
+      const gapParts = [];
+      if (proGap > 0) gapParts.push(`${Math.round(proGap)}g 蛋白質`);
+      if (carbGap > 0) gapParts.push(`${Math.round(carbGap)}g 碳水`);
+      if (gapParts.length === 0 && calGap > 0) gapParts.push(`${calGap} kcal 熱量`);
+
+      const gapText = gapParts.join('與 ');
+
+      return {
+        isGoalMet: false,
+        proGap,
+        carbGap,
+        calGap,
+        title: '💡 達標補給建議',
+        message: `您還差 ${gapText}，建議可再補充【${picked.name}】即可完美達標！`,
+        recommendedItem: picked
+      };
+    }
+
     // ==========================================
     // 2. Firebase 雲端同步與本機持久化服務
     // ==========================================
@@ -1342,6 +1515,36 @@
         }
       };
 
+      // 支援 iOS 捷徑的三合一網址路由 (URL Action Routing: ?action=camera | ?action=presets | ?food=...)
+      useEffect(() => {
+        if (authLoading || !user) return;
+        if (typeof window === 'undefined') return;
+
+        const params = new URLSearchParams(window.location.search);
+        const actionParam = params.get('action');
+        const foodParam = params.get('food');
+
+        if (!actionParam && !foodParam) return;
+
+        // 執行路由切換後，清除網址參數保持乾淨
+        const cleanUrl =
+          window.location.pathname + (window.location.hash ? window.location.hash : '');
+        window.history.replaceState({}, document.title, cleanUrl);
+
+        if (actionParam === 'camera') {
+          setActiveBottomTab('add');
+          showToast('📸 已為您切換至「AI 拍照 / 手動紀錄」分頁！');
+        } else if (actionParam === 'presets') {
+          setActiveBottomTab('presets');
+          showToast('⚡ 已為您切換至「在地快速菜單」分頁！');
+        } else if (foodParam && foodParam.trim()) {
+          const cleanFoodText = foodParam.trim();
+          setActiveBottomTab('add');
+          setAiTextQuery(cleanFoodText);
+          triggerTextToAiAnalysis(cleanFoodText);
+        }
+      }, [authLoading, user]);
+
       const handleSaveAsFavorite = async (item) => {
         if (!user?.uid) return;
         setSavingFavId(item.id);
@@ -1884,6 +2087,7 @@
                   selectedDate={selectedDate}
                   dailyTotals={dailyTotals}
                   targets={targets}
+                  onQuickAdd={quickAddFoodDirectly}
                 />
 
                 {/* 功能分頁快速切換鈕 */}
@@ -2772,7 +2976,7 @@
       );
     }
 
-    function DashboardCard({ selectedDate, dailyTotals, targets }) {
+    function DashboardCard({ selectedDate, dailyTotals, targets, onQuickAdd }) {
       const calPercent = Math.min(
         Math.round((dailyTotals.calories / Math.max(targets.targetCalories, 1)) * 100),
         100
@@ -2788,6 +2992,12 @@
       const fatPercent = Math.min(
         Math.round((dailyTotals.fat / Math.max(targets.fat, 1)) * 100),
         100
+      );
+
+      // 智慧達標建議系統：動態計算當日蛋白質、碳水與熱量缺口並推薦補給食物
+      const macroSuggestion = useMemo(
+        () => generateSmartMacroSuggestion(dailyTotals, targets),
+        [dailyTotals, targets]
       );
 
       const pCal = dailyTotals.protein * 4;
@@ -2956,6 +3166,51 @@
                   style={{ width: `${fatPercent}%` }}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* 💡 智慧達標補給建議區塊 (Smart Macro Suggestions) */}
+          <div
+            className={`rounded-2xl p-3.5 border transition-all ${
+              macroSuggestion.isGoalMet
+                ? 'bg-gradient-to-r from-emerald-950/70 via-emerald-900/30 to-cyan-950/60 border-emerald-400/50 shadow-lg shadow-emerald-500/10'
+                : 'bg-gradient-to-r from-amber-950/40 via-slate-950/90 to-emerald-950/40 border-amber-500/40 shadow-lg shadow-amber-500/5'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={`text-xs font-black tracking-wide ${
+                      macroSuggestion.isGoalMet ? 'text-emerald-300' : 'text-amber-300'
+                    }`}
+                  >
+                    {macroSuggestion.title}
+                  </span>
+                  {!macroSuggestion.isGoalMet && macroSuggestion.recommendedItem && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900/90 text-emerald-300 border border-emerald-500/30 font-extrabold">
+                      +{macroSuggestion.recommendedItem.protein}g P · +
+                      {macroSuggestion.recommendedItem.carbs}g C · +
+                      {macroSuggestion.recommendedItem.calories} kcal
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-200 leading-relaxed font-semibold">
+                  {macroSuggestion.message}
+                </p>
+              </div>
+
+              {!macroSuggestion.isGoalMet &&
+                macroSuggestion.recommendedItem &&
+                typeof onQuickAdd === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => onQuickAdd(macroSuggestion.recommendedItem)}
+                    className="flex-shrink-0 self-center px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-xs font-black shadow-md shadow-emerald-500/20 transition active:scale-95"
+                  >
+                    ＋紀錄
+                  </button>
+                )}
             </div>
           </div>
         </section>
