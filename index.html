@@ -48,6 +48,8 @@
     import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import {
       getAuth,
+      setPersistence,
+      browserLocalPersistence,
       signInWithEmailAndPassword,
       createUserWithEmailAndPassword,
       signInWithPopup,
@@ -330,6 +332,10 @@
       try {
         const app = getApps().length > 0 ? getApp() : initializeApp(config);
         const auth = getAuth(app);
+        // 明確要求 Firebase 將登入狀態永久保存在設備的 LocalStorage / IndexedDB 中
+        setPersistence(auth, browserLocalPersistence).catch((err) => {
+          console.warn('設定 Firebase Auth 持久化失敗:', err);
+        });
         const db = getFirestore(app);
         firebaseInstances = { app, auth, db, isCloud: true };
         return firebaseInstances;
@@ -341,7 +347,8 @@
 
     async function saveUserProfile(uid, profileData) {
       const allProfiles = JSON.parse(localStorage.getItem(STORAGE_KEYS.LOCAL_PROFILES) || '{}');
-      allProfiles[uid] = { ...profileData, updatedAt: new Date().toISOString() };
+      const existingProfile = allProfiles[uid] || {};
+      allProfiles[uid] = { ...existingProfile, ...profileData, updatedAt: new Date().toISOString() };
       localStorage.setItem(STORAGE_KEYS.LOCAL_PROFILES, JSON.stringify(allProfiles));
 
       const fb = initFirebaseClient();
@@ -871,6 +878,9 @@
         setIsCloudConnected(Boolean(fb?.isCloud));
 
         if (fb?.auth) {
+          // 強制設定持久化為 browserLocalPersistence，解決 iOS Web App 重開登出問題
+          setPersistence(fb.auth, browserLocalPersistence).catch(() => {});
+
           const unsub = onAuthStateChanged(fb.auth, async (fbUser) => {
             if (fbUser) {
               const currentUser = {
@@ -880,10 +890,14 @@
                 mode: 'firebase'
               };
               setUser(currentUser);
+              localStorage.setItem(STORAGE_KEYS.LOCAL_USER, JSON.stringify(currentUser));
               const loadedProfile = await loadUserProfile(currentUser.uid);
               if (loadedProfile) {
+                if (loadedProfile.geminiKey) {
+                  saveGeminiKey(loadedProfile.geminiKey);
+                }
                 setProfile(loadedProfile);
-                setShowOnboarding(false);
+                setShowOnboarding(!loadedProfile.targets);
               } else {
                 setShowOnboarding(true);
               }
@@ -895,8 +909,11 @@
                 setUser(parsedUser);
                 const loadedProfile = await loadUserProfile(parsedUser.uid);
                 if (loadedProfile) {
+                  if (loadedProfile.geminiKey) {
+                    saveGeminiKey(loadedProfile.geminiKey);
+                  }
                   setProfile(loadedProfile);
-                  setShowOnboarding(false);
+                  setShowOnboarding(!loadedProfile.targets);
                 } else {
                   setShowOnboarding(true);
                 }
@@ -913,8 +930,11 @@
             setUser(parsedUser);
             loadUserProfile(parsedUser.uid).then((loadedProfile) => {
               if (loadedProfile) {
+                if (loadedProfile.geminiKey) {
+                  saveGeminiKey(loadedProfile.geminiKey);
+                }
                 setProfile(loadedProfile);
-                setShowOnboarding(false);
+                setShowOnboarding(!loadedProfile.targets);
               } else {
                 setShowOnboarding(true);
               }
@@ -1517,8 +1537,11 @@
                 localStorage.setItem(STORAGE_KEYS.LOCAL_USER, JSON.stringify(loggedUser));
                 const existingProfile = await loadUserProfile(loggedUser.uid);
                 if (existingProfile) {
+                  if (existingProfile.geminiKey) {
+                    saveGeminiKey(existingProfile.geminiKey);
+                  }
                   setProfile(existingProfile);
-                  setShowOnboarding(false);
+                  setShowOnboarding(!existingProfile.targets);
                 } else {
                   setShowOnboarding(true);
                 }
@@ -2539,12 +2562,21 @@
 
           {showCloudModal && (
             <CloudConfigModal
+              user={user}
+              profile={profile}
               onClose={() => setShowCloudModal(false)}
-              onSaved={() => {
+              onSaved={(updatedProfile) => {
+                if (updatedProfile) {
+                  setProfile(updatedProfile);
+                }
                 const fb = initFirebaseClient();
                 setIsCloudConnected(Boolean(fb?.isCloud));
                 setShowCloudModal(false);
-                showToast('已儲存 API 與雲端設定！');
+                showToast(
+                  user?.uid
+                    ? '🔑 已儲存 API 金鑰並同步綁定至您的雲端帳號！'
+                    : '已儲存 API 與雲端設定！'
+                );
               }}
             />
           )}
@@ -3151,6 +3183,7 @@
         try {
           const fb = initFirebaseClient();
           if (fb?.auth) {
+            await setPersistence(fb.auth, browserLocalPersistence);
             if (isRegister) {
               const cred = await createUserWithEmailAndPassword(fb.auth, email, password);
               if (displayName.trim()) {
@@ -3196,6 +3229,7 @@
           return;
         }
         try {
+          await setPersistence(fb.auth, browserLocalPersistence);
           const provider = new GoogleAuthProvider();
           const cred = await signInWithPopup(fb.auth, provider);
           onLoginSuccess({
@@ -3323,18 +3357,20 @@
       );
     }
 
-    function CloudConfigModal({ onClose, onSaved }) {
+    function CloudConfigModal({ user, profile, onClose, onSaved }) {
       const [geminiKey, setGeminiKey] = useState(() => getSavedGeminiKey());
       const [firebaseJson, setFirebaseJson] = useState(() => {
         const cfg = getSavedFirebaseConfig();
         return cfg ? JSON.stringify(cfg, null, 2) : '';
       });
       const [error, setError] = useState('');
+      const [saving, setSaving] = useState(false);
 
-      const handleSave = (e) => {
+      const handleSave = async (e) => {
         e.preventDefault();
         setError('');
-        saveGeminiKey(geminiKey);
+        const trimmedKey = (geminiKey || '').trim();
+        saveGeminiKey(trimmedKey);
         if (firebaseJson.trim()) {
           try {
             const parsed = JSON.parse(firebaseJson);
@@ -3350,7 +3386,22 @@
         } else {
           saveFirebaseConfig(null);
         }
-        onSaved();
+
+        let updatedProfile = null;
+        if (user?.uid) {
+          setSaving(true);
+          try {
+            updatedProfile = await saveUserProfile(user.uid, {
+              ...(profile || {}),
+              geminiKey: trimmedKey
+            });
+          } catch (err) {
+            console.warn('同步 Gemini Key 至雲端失敗:', err);
+          } finally {
+            setSaving(false);
+          }
+        }
+        onSaved(updatedProfile);
       };
 
       return (
