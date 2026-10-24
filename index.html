@@ -1368,7 +1368,7 @@
         return list;
       }, [allLogsCache, dailyItems, selectedDate]);
 
-      // Step 2：比對該地點（place_id、店名、或 Haversine 25m~30m 內座標）過去曾點過的餐點與常吃清單
+      // Step 2：嚴格比對該地點（mode === 'place' 僅比對 placeId 或 店名，僅在 custom_gps 時啟用 25m 內座標比對）
       const placeHistoryItems = useMemo(() => {
         if (!selectedPlace || selectedPlace.mode === 'none') return [];
         const matchedMap = new Map();
@@ -1394,6 +1394,7 @@
           ) {
             isMatch = true;
           } else if (
+            selectedPlace.mode === 'custom_gps' &&
             selectedPlace.lat != null &&
             selectedPlace.lng != null &&
             item.lat != null &&
@@ -1405,7 +1406,7 @@
               Number(item.lat),
               Number(item.lng)
             );
-            if (dist <= (selectedPlace.mode === 'custom_gps' ? 25 : 30)) {
+            if (dist <= 25) {
               isMatch = true;
             }
           }
