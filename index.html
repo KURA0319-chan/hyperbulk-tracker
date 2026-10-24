@@ -4428,7 +4428,7 @@
     }
 
     /**
-     * 動態載入 Google Maps JavaScript API (含 Places Library)
+     * 動態載入 Google Maps JavaScript API (支援最新 Places API (New), v=beta)
      */
     let googleMapsScriptPromise = null;
     let loadedMapsApiKey = '';
@@ -4438,7 +4438,12 @@
       if (!cleanKey) {
         return Promise.reject(new Error('尚未設定 Google Maps API Key'));
       }
-      if (window.google && window.google.maps && window.google.maps.places && loadedMapsApiKey === cleanKey) {
+      if (
+        window.google &&
+        window.google.maps &&
+        typeof window.google.maps.importLibrary === 'function' &&
+        loadedMapsApiKey === cleanKey
+      ) {
         return Promise.resolve(window.google.maps);
       }
       if (googleMapsScriptPromise && loadedMapsApiKey === cleanKey) {
@@ -4453,7 +4458,7 @@
         }
         const script = document.createElement('script');
         script.id = 'hyperbulk-google-maps-script';
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(cleanKey)}&libraries=places&language=zh-TW`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(cleanKey)}&v=beta&libraries=places&language=zh-TW`;
         script.async = true;
         script.defer = true;
         script.onload = () => {
@@ -4475,8 +4480,55 @@
     }
 
     /**
+     * 解析新版 Places API (New) 的 Place 實例屬性
+     * (place.id, place.displayName, place.formattedAddress, place.location.lat()/lng())
+     */
+    function parseNewPlaceObject(place, centerPos = null) {
+      if (!place) return null;
+      const lat =
+        typeof place.location?.lat === 'function'
+          ? place.location.lat()
+          : typeof place.location?.lat === 'number'
+            ? place.location.lat
+            : null;
+      const lng =
+        typeof place.location?.lng === 'function'
+          ? place.location.lng()
+          : typeof place.location?.lng === 'number'
+            ? place.location.lng
+            : null;
+      const displayName =
+        typeof place.displayName === 'object' && place.displayName !== null
+          ? place.displayName.text || ''
+          : place.displayName || place.name || '未知店家';
+      const formattedAddress =
+        place.formattedAddress || place.shortFormattedAddress || '';
+      const dist =
+        lat != null && lng != null && centerPos && centerPos.lat != null && centerPos.lng != null
+          ? Math.round(
+              calculateHaversineDistanceMeters(
+                Number(centerPos.lat),
+                Number(centerPos.lng),
+                Number(lat),
+                Number(lng)
+              )
+            )
+          : null;
+
+      return {
+        placeId: place.id || `place_${displayName}`,
+        placeName: displayName,
+        address: formattedAddress,
+        lat,
+        lng,
+        distanceM: dist,
+        rating: place.rating || null
+      };
+    }
+
+    /**
      * Step 1: 以地點為中心的選擇器元件 (Location First)
-     * 整合微型 Google Map、搜尋/附近店家列表，以及 A / B / C 三大選項
+     * 整合微型 Google Map、Places API (New) 搜尋/附近店家列表，以及 A / B / C 三大選項
      */
     function LocationStep1Picker({
       mapsKey,
@@ -4491,7 +4543,6 @@
     }) {
       const mapContainerRef = useRef(null);
       const mapInstanceRef = useRef(null);
-      const placesServiceRef = useRef(null);
       const markersRef = useRef([]);
 
       const [searchQuery, setSearchQuery] = useState('');
@@ -4616,55 +4667,48 @@
         });
       };
 
-      const fetchNearbyFoodPlaces = (gmaps, map, centerPos) => {
-        if (!gmaps?.places || !map) return;
-        const service =
-          placesServiceRef.current || new gmaps.places.PlacesService(map);
-        placesServiceRef.current = service;
-
+      // 使用新版 Places API (New): Place.searchNearby() 搜尋附近餐廳
+      const fetchNearbyFoodPlaces = async (gmaps, map, centerPos) => {
+        if (!gmaps || !map) return;
         setSearchingPlaces(true);
-        service.nearbySearch(
-          {
-            location: centerPos,
-            radius: 350,
-            type: 'restaurant'
-          },
-          (results, status) => {
-            setSearchingPlaces(false);
-            if (
-              status === gmaps.places.PlacesServiceStatus.OK &&
-              Array.isArray(results) &&
-              results.length > 0
-            ) {
-              const formatted = results.slice(0, 10).map((r) => {
-                const lat = r.geometry?.location?.lat?.() ?? null;
-                const lng = r.geometry?.location?.lng?.() ?? null;
-                const dist =
-                  lat != null && lng != null && centerPos
-                    ? Math.round(
-                        calculateHaversineDistanceMeters(
-                          centerPos.lat,
-                          centerPos.lng,
-                          lat,
-                          lng
-                        )
-                      )
-                    : null;
-                return {
-                  placeId: r.place_id,
-                  placeName: r.name,
-                  address: r.vicinity || r.formatted_address || '',
-                  lat,
-                  lng,
-                  distanceM: dist,
-                  rating: r.rating || null
-                };
-              });
-              setNearbyPlaces(formatted);
-              renderPlaceMarkers(formatted, gmaps, map);
-            }
+        try {
+          const { Place, SearchNearbyRankPreference } = await gmaps.importLibrary('places');
+          const request = {
+            fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating'],
+            locationRestriction: {
+              center: {
+                lat: Number(centerPos.lat),
+                lng: Number(centerPos.lng)
+              },
+              radius: 350
+            },
+            includedPrimaryTypes: [
+              'restaurant',
+              'meal_takeaway',
+              'cafe',
+              'bakery',
+              'convenience_store'
+            ],
+            maxResultCount: 12,
+            language: 'zh-TW'
+          };
+          if (SearchNearbyRankPreference?.DISTANCE) {
+            request.rankPreference = SearchNearbyRankPreference.DISTANCE;
           }
-        );
+
+          const { places } = await Place.searchNearby(request);
+          if (Array.isArray(places) && places.length > 0) {
+            const formatted = places
+              .map((p) => parseNewPlaceObject(p, centerPos))
+              .filter(Boolean);
+            setNearbyPlaces(formatted);
+            renderPlaceMarkers(formatted, gmaps, map);
+          }
+        } catch (err) {
+          console.warn('Places API (New) searchNearby 失敗:', err);
+        } finally {
+          setSearchingPlaces(false);
+        }
       };
 
       useEffect(() => {
@@ -4679,7 +4723,7 @@
         setMapErrorMsg('');
 
         loadGoogleMapsApi(cleanKey)
-          .then((gmaps) => {
+          .then(async (gmaps) => {
             if (cancelled || !mapContainerRef.current) return;
             const centerPos = currentCoords
               ? { lat: Number(currentCoords.lat), lng: Number(currentCoords.lng) }
@@ -4714,7 +4758,6 @@
             });
 
             mapInstanceRef.current = map;
-            placesServiceRef.current = new gmaps.places.PlacesService(map);
 
             new gmaps.Marker({
               position: centerPos,
@@ -4730,47 +4773,38 @@
               }
             });
 
-            map.addListener('click', (event) => {
+            // 點擊地圖上的店家 POI 圖示時，使用新版 Place.fetchFields() 取得店家名稱與座標
+            map.addListener('click', async (event) => {
               if (event.placeId) {
                 event.stop();
-                const service = placesServiceRef.current;
-                if (service) {
-                  service.getDetails(
-                    {
-                      placeId: event.placeId,
-                      fields: ['name', 'place_id', 'formatted_address', 'geometry']
-                    },
-                    (place, status) => {
-                      if (
-                        status === gmaps.places.PlacesServiceStatus.OK &&
-                        place
-                      ) {
-                        onSelectPlace({
-                          mode: 'place',
-                          placeId: place.place_id || event.placeId,
-                          placeName: place.name || '地圖所選店家',
-                          address: place.formatted_address || '',
-                          lat:
-                            place.geometry?.location?.lat?.() ??
-                            event.latLng?.lat?.() ??
-                            centerPos.lat,
-                          lng:
-                            place.geometry?.location?.lng?.() ??
-                            event.latLng?.lng?.() ??
-                            centerPos.lng
-                        });
-                      } else {
-                        onSelectPlace({
-                          mode: 'place',
-                          placeId: event.placeId,
-                          placeName: '地圖所選店家',
-                          address: '',
-                          lat: event.latLng?.lat?.() ?? centerPos.lat,
-                          lng: event.latLng?.lng?.() ?? centerPos.lng
-                        });
-                      }
-                    }
-                  );
+                try {
+                  const { Place } = await gmaps.importLibrary('places');
+                  const place = new Place({
+                    id: event.placeId,
+                    requestedLanguage: 'zh-TW'
+                  });
+                  await place.fetchFields({
+                    fields: ['id', 'displayName', 'formattedAddress', 'location']
+                  });
+                  const parsed = parseNewPlaceObject(place, centerPos);
+                  onSelectPlace({
+                    mode: 'place',
+                    placeId: parsed?.placeId || event.placeId,
+                    placeName: parsed?.placeName || '地圖所選店家',
+                    address: parsed?.address || '',
+                    lat: parsed?.lat ?? event.latLng?.lat?.() ?? centerPos.lat,
+                    lng: parsed?.lng ?? event.latLng?.lng?.() ?? centerPos.lng
+                  });
+                } catch (err) {
+                  console.warn('Places API (New) fetchFields 失敗:', err);
+                  onSelectPlace({
+                    mode: 'place',
+                    placeId: event.placeId,
+                    placeName: '地圖所選店家',
+                    address: '',
+                    lat: event.latLng?.lat?.() ?? centerPos.lat,
+                    lng: event.latLng?.lng?.() ?? centerPos.lng
+                  });
                 }
               }
             });
@@ -4789,61 +4823,62 @@
         };
       }, [mapsKey, mapsKeyVersion, currentCoords?.lat, currentCoords?.lng]);
 
-      const handleKeywordSearch = (e) => {
+      // 使用新版 Places API (New): Place.searchByText() 進行關鍵字搜尋
+      const handleKeywordSearch = async (e) => {
         if (e) e.preventDefault();
         const q = searchQuery.trim();
         if (!q) return;
 
         if (
           mapStatus === 'ready' &&
-          window.google?.maps?.places &&
-          placesServiceRef.current &&
+          window.google?.maps &&
           mapInstanceRef.current
         ) {
           const gmaps = window.google.maps;
+          const mapCenter = mapInstanceRef.current.getCenter();
           const centerPos = currentCoords
             ? { lat: Number(currentCoords.lat), lng: Number(currentCoords.lng) }
-            : mapInstanceRef.current.getCenter();
+            : {
+                lat: typeof mapCenter?.lat === 'function' ? mapCenter.lat() : 25.033964,
+                lng: typeof mapCenter?.lng === 'function' ? mapCenter.lng() : 121.564468
+              };
 
           setSearchingPlaces(true);
-          placesServiceRef.current.textSearch(
-            {
-              query: q,
-              location: centerPos,
-              radius: 1500
-            },
-            (results, status) => {
-              setSearchingPlaces(false);
-              if (
-                status === gmaps.places.PlacesServiceStatus.OK &&
-                Array.isArray(results) &&
-                results.length > 0
-              ) {
-                const formatted = results.slice(0, 10).map((r) => {
-                  const lat = r.geometry?.location?.lat?.() ?? null;
-                  const lng = r.geometry?.location?.lng?.() ?? null;
-                  return {
-                    placeId: r.place_id,
-                    placeName: r.name,
-                    address: r.formatted_address || r.vicinity || '',
-                    lat,
-                    lng,
-                    rating: r.rating || null
-                  };
+          try {
+            const { Place } = await gmaps.importLibrary('places');
+            const request = {
+              textQuery: q,
+              fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating'],
+              locationBias: {
+                center: centerPos,
+                radius: 1500
+              },
+              maxResultCount: 10,
+              language: 'zh-TW'
+            };
+
+            const { places } = await Place.searchByText(request);
+            if (Array.isArray(places) && places.length > 0) {
+              const formatted = places
+                .map((p) => parseNewPlaceObject(p, centerPos))
+                .filter(Boolean);
+              setNearbyPlaces(formatted);
+              if (formatted[0]?.lat != null && formatted[0]?.lng != null) {
+                mapInstanceRef.current.panTo({
+                  lat: Number(formatted[0].lat),
+                  lng: Number(formatted[0].lng)
                 });
-                setNearbyPlaces(formatted);
-                if (formatted[0]?.lat != null && formatted[0]?.lng != null) {
-                  mapInstanceRef.current.panTo({
-                    lat: formatted[0].lat,
-                    lng: formatted[0].lng
-                  });
-                }
-                renderPlaceMarkers(formatted, gmaps, mapInstanceRef.current);
-              } else {
-                showToast?.(`找不到「${q}」的 Google 地圖結果，您可直接點選下方自訂店名進入 Step 2`);
               }
+              renderPlaceMarkers(formatted, gmaps, mapInstanceRef.current);
+            } else {
+              showToast?.(`找不到「${q}」的 Google 地圖結果，您可直接點選下方自訂店名進入 Step 2`);
             }
-          );
+          } catch (err) {
+            console.warn('Places API (New) searchByText 失敗:', err);
+            showToast?.(`搜尋「${q}」時發生錯誤，您可直接點選「直接選此店 ➔」進入 Step 2`);
+          } finally {
+            setSearchingPlaces(false);
+          }
         }
       };
 
