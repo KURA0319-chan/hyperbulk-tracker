@@ -5296,7 +5296,7 @@
           return;
         }
         let cancelled = false;
-        loadGoogleMapsSdk(savedMapsKey)
+        loadGoogleMapsApi(savedMapsKey)
           .then(() => {
             if (!cancelled) {
               setMapsReady(true);
