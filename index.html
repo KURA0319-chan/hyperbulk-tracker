@@ -5411,7 +5411,6 @@
 
             const res = await Place.searchByText({
               textQuery: randomKeyword,
-              openNow: true,
               fields: [
                 'id',
                 'displayName',
@@ -5430,9 +5429,13 @@
             });
             const places = res?.places || [];
 
-            // 伺服器端已透過 openNow: true 過濾營業狀態，前端僅需確認 businessStatus === 'OPERATIONAL'
+            // 前端嚴格過濾：確認 p.businessStatus === 'OPERATIONAL' 且 p.regularOpeningHours?.openNow === true
             const openCandidates = places
-              .filter((p) => p.businessStatus === 'OPERATIONAL')
+              .filter(
+                (p) =>
+                  p.businessStatus === 'OPERATIONAL' &&
+                  p.regularOpeningHours?.openNow === true
+              )
               .map((p) => {
                 const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
                 if (!parsed) return null;
