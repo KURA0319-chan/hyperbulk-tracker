@@ -1271,10 +1271,10 @@
         }
       };
 
-      // 當打開網站或切換到「新增紀錄 (add)」頁面時，自動比對當下座標與常吃餐點座標
+      // 當打開網站或切換到「新增紀錄 (add)」或「地圖探索 (map)」頁面時，自動更新當下座標
       useEffect(() => {
         if (!user?.uid) return;
-        if (activeBottomTab === 'dashboard' || activeBottomTab === 'add') {
+        if (activeBottomTab === 'dashboard' || activeBottomTab === 'add' || activeBottomTab === 'map') {
           refreshGpsLocation(true);
         }
       }, [user?.uid, activeBottomTab]);
@@ -1435,7 +1435,7 @@
         return Array.from(matchedMap.values());
       }, [selectedPlace, allHistoricalLogsFlat, favorites]);
 
-      // Step 1 選擇地點後進入 Step 2
+      // Step 1 或地圖探索選擇地點後進入「📸 紀錄」的 Step 2
       const handleSelectPlaceInStep1 = (placeObj) => {
         const nextPlace = {
           mode: placeObj.mode || 'place',
@@ -1450,6 +1450,7 @@
           lng: placeObj.lng ?? null
         };
         setSelectedPlace(nextPlace);
+        setActiveBottomTab('add');
         setAddStep(2);
         setShowNewDishForm(nextPlace.mode === 'none');
         setTimeout(() => {
@@ -2421,17 +2422,17 @@
                   onQuickAdd={quickAddFoodDirectly}
                 />
 
-                {/* 雙分頁快速切換鈕：📊 儀表板 與 📸 紀錄 (地點/AI) */}
-                <div className="grid grid-cols-2 gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+                {/* 三分頁快速切換鈕：📊 儀表板、📸 紀錄、🗺️ 地圖探索 */}
+                <div className="grid grid-cols-3 gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
                   <button
                     onClick={() => setActiveBottomTab('dashboard')}
-                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 ${
+                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1 ${
                       activeBottomTab === 'dashboard'
                         ? 'bg-emerald-500 text-slate-950 shadow-md'
                         : 'text-slate-300 hover:text-white'
                     }`}
                   >
-                    <span>📊</span> 儀表板 · 當日明細 ({dailyItems.length})
+                    <span>📊</span> 儀表板 ({dailyItems.length})
                   </button>
                   <button
                     onClick={() => {
@@ -2440,13 +2441,23 @@
                         setAddStep(1);
                       }
                     }}
-                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 ${
+                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1 ${
                       activeBottomTab === 'add'
                         ? 'bg-emerald-500 text-slate-950 shadow-md'
                         : 'text-slate-300 hover:text-white'
                     }`}
                   >
-                    <span>📸</span> 紀錄 (地點/AI)
+                    <span>📸</span> 紀錄
+                  </button>
+                  <button
+                    onClick={() => setActiveBottomTab('map')}
+                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1 ${
+                      activeBottomTab === 'map'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span>🗺️</span> 地圖探索
                   </button>
                 </div>
 
@@ -3359,15 +3370,27 @@
                 )}
               </main>
 
-              {/* 手機底部大按鈕導覽列（精簡為 2 個核心分頁：📊 儀表板 與 📸 紀錄 (地點/AI)） */}
-              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#070B12]/95 backdrop-blur-xl border-t border-slate-800/90 px-4 py-2">
-                <div className="max-w-lg mx-auto grid grid-cols-2 gap-2.5">
+              {/* 全螢幕地圖探索與隨機餐廳視圖（佔滿扣除導覽列的剩餘空間，搭配淺色地圖與 Apple 液態毛玻璃 UI） */}
+              {activeBottomTab === 'map' && (
+                <FullScreenMapExplore
+                  currentCoords={currentCoords}
+                  gpsStatus={gpsStatus}
+                  onRefreshGps={() => refreshGpsLocation(false)}
+                  onOpenCloudConfig={() => setShowCloudModal(true)}
+                  onPickPlaceForLog={(placeObj) => handleSelectPlaceInStep1(placeObj)}
+                  showToast={showToast}
+                />
+              )}
+
+              {/* 手機底部大按鈕導覽列（3 個按鈕：📊 儀表板、📸 紀錄、🗺️ 地圖探索，採用 Apple 液態毛玻璃風格） */}
+              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#070B12]/80 backdrop-blur-2xl border-t border-slate-700/50 shadow-2xl px-3 py-2">
+                <div className="max-w-lg mx-auto grid grid-cols-3 gap-2">
                   <button
                     onClick={() => setActiveBottomTab('dashboard')}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-2 font-extrabold text-xs transition ${
+                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 ${
                       activeBottomTab === 'dashboard'
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-md'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/50 shadow-lg backdrop-blur-xl'
+                        : 'bg-white/5 text-slate-300 hover:text-white border border-white/10 hover:bg-white/10'
                     }`}
                   >
                     <span className="text-base">📊</span>
@@ -3381,14 +3404,26 @@
                         setAddStep(1);
                       }
                     }}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-2 font-extrabold text-xs transition ${
+                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 ${
                       activeBottomTab === 'add'
-                        ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20'
-                        : 'bg-slate-800/90 text-emerald-300 border border-slate-700'
+                        ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/25 border border-white/30'
+                        : 'bg-white/5 text-emerald-300 hover:text-emerald-200 border border-white/10 hover:bg-white/10'
                     }`}
                   >
                     <span className="text-base">📸</span>
-                    <span>紀錄 (地點/AI)</span>
+                    <span>紀錄</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveBottomTab('map')}
+                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 ${
+                      activeBottomTab === 'map'
+                        ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/50 shadow-lg backdrop-blur-xl'
+                        : 'bg-white/5 text-slate-300 hover:text-white border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <span className="text-base">🗺️</span>
+                    <span>地圖探索</span>
                   </button>
                 </div>
               </nav>
@@ -5226,6 +5261,498 @@
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      );
+    }
+
+    function FullScreenMapExplore({
+      currentCoords,
+      gpsStatus,
+      onRefreshGps,
+      onOpenCloudConfig,
+      onPickPlaceForLog,
+      showToast
+    }) {
+      const [mapsReady, setMapsReady] = useState(false);
+      const [mapsError, setMapsError] = useState('');
+      const [searchingRandom, setSearchingRandom] = useState(false);
+      const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+      const [foundPoolCount, setFoundPoolCount] = useState(0);
+
+      const mapContainerRef = useRef(null);
+      const mapRef = useRef(null);
+      const userMarkerRef = useRef(null);
+      const placeMarkersRef = useRef([]);
+      const activePinListenerRef = useRef(null);
+
+      const savedMapsKey = getSavedMapsKey();
+
+      // 載入 Google Maps JS SDK (Places API New)
+      useEffect(() => {
+        if (!savedMapsKey) {
+          setMapsReady(false);
+          setMapsError('');
+          return;
+        }
+        let cancelled = false;
+        loadGoogleMapsSdk(savedMapsKey)
+          .then(() => {
+            if (!cancelled) {
+              setMapsReady(true);
+              setMapsError('');
+            }
+          })
+          .catch((err) => {
+            if (!cancelled) {
+              setMapsReady(false);
+              setMapsError(err.message || 'Google Maps 載入失敗');
+            }
+          });
+        return () => {
+          cancelled = true;
+        };
+      }, [savedMapsKey]);
+
+      // 初始化全螢幕淺色地圖（Light Theme：移除暗色 styles 陣列，凸顯上方深色毛玻璃 UI 的高低反差與穿透感）
+      useEffect(() => {
+        if (!mapsReady || !mapContainerRef.current || !window.google?.maps) return;
+        const gmaps = window.google.maps;
+        const center = currentCoords
+          ? { lat: Number(currentCoords.lat), lng: Number(currentCoords.lng) }
+          : { lat: 25.033964, lng: 121.564468 };
+
+        if (!mapRef.current) {
+          mapRef.current = new gmaps.Map(mapContainerRef.current, {
+            center,
+            zoom: 16,
+            disableDefaultUI: true,
+            zoomControl: true,
+            clickableIcons: true,
+            gestureHandling: 'greedy',
+            padding: { top: 84, bottom: 80, left: 12, right: 12 }
+          });
+
+          // 支援直接點擊地圖上的淺色原生 POI 圖示
+          activePinListenerRef.current = mapRef.current.addListener('click', async (event) => {
+            if (!event.placeId) return;
+            event.stop();
+            try {
+              const { Place } = await gmaps.importLibrary('places');
+              const place = new Place({ id: event.placeId });
+              await place.fetchFields({
+                fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating', 'regularOpeningHours']
+              });
+              const parsed = parseNewPlaceObject(place, currentCoords);
+              if (parsed) {
+                setSelectedRestaurant({
+                  ...parsed,
+                  openNow: place.regularOpeningHours?.openNow ?? true
+                });
+                mapRef.current.panTo({ lat: parsed.lat, lng: parsed.lng });
+              }
+            } catch (e) {
+              console.warn('Map POI click fetchFields error:', e);
+            }
+          });
+        } else if (currentCoords && !selectedRestaurant) {
+          mapRef.current.panTo(center);
+        }
+
+        if (currentCoords) {
+          if (!userMarkerRef.current) {
+            userMarkerRef.current = new gmaps.Marker({
+              position: center,
+              map: mapRef.current,
+              title: '目前位置',
+              zIndex: 999,
+              icon: {
+                path: gmaps.SymbolPath.CIRCLE,
+                scale: 9,
+                fillColor: '#10b981',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 3
+              }
+            });
+          } else {
+            userMarkerRef.current.setPosition(center);
+          }
+        }
+      }, [mapsReady, currentCoords]);
+
+      // 🎲 隨機找餐廳 (現在有開)
+      const handleRandomOpenRestaurant = async () => {
+        setSearchingRandom(true);
+        try {
+          let coords = currentCoords;
+          if (!coords && typeof onRefreshGps === 'function') {
+            coords = await onRefreshGps();
+          }
+          const centerLat = Number(coords?.lat) || 25.033964;
+          const centerLng = Number(coords?.lng) || 121.564468;
+          const center = { lat: centerLat, lng: centerLng };
+
+          if (mapsReady && window.google?.maps) {
+            const gmaps = window.google.maps;
+            const { Place } = await gmaps.importLibrary('places');
+
+            let places = [];
+            try {
+              // 優先依照規格呼叫 Place.searchNearby (半徑 1000m、includedPrimaryTypes、openNow: true)
+              const res = await Place.searchNearby({
+                fields: [
+                  'id',
+                  'displayName',
+                  'formattedAddress',
+                  'location',
+                  'rating',
+                  'regularOpeningHours',
+                  'businessStatus'
+                ],
+                locationRestriction: {
+                  center,
+                  radius: 1000
+                },
+                includedPrimaryTypes: ['restaurant', 'meal_takeaway', 'fast_food'],
+                openNow: true,
+                maxResultCount: 20
+              });
+              places = res?.places || [];
+            } catch (primaryErr) {
+              // 相容性自動降級：若 Places API (New) 因 fast_food 型別名稱或參數格式拋錯，改用標準 Table A 型別查詢並過濾營業中
+              console.warn('Primary searchNearby retry with standard Table A types:', primaryErr);
+              const fallbackRes = await Place.searchNearby({
+                fields: [
+                  'id',
+                  'displayName',
+                  'formattedAddress',
+                  'location',
+                  'rating',
+                  'regularOpeningHours',
+                  'businessStatus'
+                ],
+                locationRestriction: {
+                  center,
+                  radius: 1000
+                },
+                includedPrimaryTypes: ['restaurant', 'meal_takeaway', 'fast_food_restaurant'],
+                maxResultCount: 20
+              });
+              places = fallbackRes?.places || [];
+            }
+
+            // 過濾確保營業中且解析欄位
+            const openCandidates = places
+              .filter((p) => {
+                if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
+                if (p.regularOpeningHours && p.regularOpeningHours.openNow === false) return false;
+                return true;
+              })
+              .map((p) => {
+                const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
+                if (!parsed) return null;
+                return {
+                  ...parsed,
+                  openNow: p.regularOpeningHours?.openNow ?? true
+                };
+              })
+              .filter(Boolean);
+
+            const finalPool =
+              openCandidates.length > 0
+                ? openCandidates
+                : places.map((p) => parseNewPlaceObject(p, { lat: centerLat, lng: centerLng })).filter(Boolean);
+
+            if (finalPool.length === 0) {
+              showToast?.('附近 1000m 內暫無符合條件且營業中的餐廳，請移動地圖或稍後再試', 'error');
+              setSearchingRandom(false);
+              return;
+            }
+
+            setFoundPoolCount(finalPool.length);
+
+            // 若池子大於 1 間，盡量避免連續抽中同一間
+            let poolToPick = finalPool;
+            if (finalPool.length > 1 && selectedRestaurant?.placeId) {
+              const filtered = finalPool.filter((item) => item.placeId !== selectedRestaurant.placeId);
+              if (filtered.length > 0) poolToPick = filtered;
+            }
+
+            const randomIndex = Math.floor(Math.random() * poolToPick.length);
+            const chosen = poolToPick[randomIndex];
+
+            // 清除舊標記並在地图上標示所有候選與當前抽中餐廳
+            placeMarkersRef.current.forEach((m) => m.setMap(null));
+            placeMarkersRef.current = [];
+
+            if (mapRef.current) {
+              finalPool.forEach((item) => {
+                const isChosen = item.placeId === chosen.placeId;
+                const marker = new gmaps.Marker({
+                  position: { lat: item.lat, lng: item.lng },
+                  map: mapRef.current,
+                  title: item.placeName,
+                  zIndex: isChosen ? 1000 : 100,
+                  animation: isChosen ? gmaps.Animation.DROP : null,
+                  icon: isChosen
+                    ? {
+                        path: gmaps.SymbolPath.CIRCLE,
+                        scale: 12,
+                        fillColor: '#f59e0b',
+                        fillOpacity: 1,
+                        strokeColor: '#0f172a',
+                        strokeWeight: 3
+                      }
+                    : {
+                        path: gmaps.SymbolPath.CIRCLE,
+                        scale: 6,
+                        fillColor: '#0284c7',
+                        fillOpacity: 0.75,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 2
+                      }
+                });
+                marker.addListener('click', () => {
+                  setSelectedRestaurant(item);
+                  mapRef.current?.panTo({ lat: item.lat, lng: item.lng });
+                });
+                placeMarkersRef.current.push(marker);
+              });
+
+              mapRef.current.panTo({ lat: chosen.lat, lng: chosen.lng });
+              mapRef.current.setZoom(17);
+            }
+
+            setSelectedRestaurant(chosen);
+            showToast?.(`🎲 為您隨機抽中：${chosen.placeName}！`);
+          } else {
+            // 尚未設定 Maps API Key 時的內建示範隨機池，確保功能隨時可體驗
+            const fallbackPool = [
+              {
+                placeId: 'demo_random_1',
+                placeName: '健康水煮餐盒 · 增肌專門店',
+                address: '目前座標周邊 350m (示範餐廳)',
+                lat: centerLat + 0.0018,
+                lng: centerLng + 0.0012,
+                distanceM: 240,
+                rating: 4.7,
+                openNow: true
+              },
+              {
+                placeId: 'demo_random_2',
+                placeName: '大口吃肉牛排定食館',
+                address: '目前座標周邊 520m (示範餐廳)',
+                lat: centerLat - 0.0021,
+                lng: centerLng + 0.0019,
+                distanceM: 310,
+                rating: 4.5,
+                openNow: true
+              },
+              {
+                placeId: 'demo_random_3',
+                placeName: '鮮魚雞胸 poke 夏威夷生魚飯',
+                address: '目前座標周邊 680m (示範餐廳)',
+                lat: centerLat + 0.0011,
+                lng: centerLng - 0.0024,
+                distanceM: 290,
+                rating: 4.8,
+                openNow: true
+              }
+            ];
+            const chosen = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+            setFoundPoolCount(fallbackPool.length);
+            setSelectedRestaurant(chosen);
+            showToast?.(`🎲 隨機推薦：${chosen.placeName}（設定 Maps 金鑰即可搜尋真實周邊餐廳）`);
+          }
+        } catch (err) {
+          console.error('Random restaurant search error:', err);
+          showToast?.(`隨機搜尋餐廳失敗：${err.message || '請確認 Places API (New) 權限'}`, 'error');
+        } finally {
+          setSearchingRandom(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-30 flex flex-col bg-slate-100 overflow-hidden select-none">
+          {/* 全螢幕明亮淺色 Google Map 底圖 (高度佔滿全螢幕，底部導覽列浮動於上方呈現液態毛玻璃穿透感) */}
+          <div className="relative w-full h-[calc(100dvh-68px)] flex-1">
+            {savedMapsKey && !mapsError ? (
+              <div ref={mapContainerRef} className="w-full h-full bg-slate-100" />
+            ) : (
+              /* 若尚未設定 Maps 金鑰，提供淺色風格視覺底圖與快速設定入口 */
+              <div
+                className="w-full h-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(circle at 25% 25%, #e0f2fe 0%, #f1f5f9 45%, #e2e8f0 100%)'
+                }}
+              >
+                <div className="max-w-sm bg-slate-900/65 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl p-6 text-left space-y-3 text-white">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">🗺️</span>
+                    <div>
+                      <h3 className="text-sm font-black text-white">全螢幕淺色地圖探索</h3>
+                      <p className="text-[11px] text-slate-300">
+                        {mapsError ? `載入失敗：${mapsError}` : '尚未設定 Google Maps API Key'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-200 leading-relaxed">
+                    輸入您的 Google Maps API Key（需啟用 <strong>Maps JavaScript API</strong> 與{' '}
+                    <strong>Places API (New)</strong>），即可開啟明亮淺色全螢幕地圖，並使用上方毛玻璃「🎲 隨機找有開的店」功能！
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={onOpenCloudConfig}
+                      className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-xs shadow-lg active:scale-95 transition"
+                    >
+                      🔑 前往設定 Maps 金鑰
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 頂部懸浮區：Apple 液態毛玻璃「🎲 不知道吃啥？隨機找有開的店」按鈕與定位狀態 */}
+            <div className="absolute top-3 left-3 right-3 z-20 pointer-events-none">
+              <div className="max-w-lg mx-auto flex flex-col gap-2 pointer-events-auto">
+                {/* 頂部狀態與定位列 (Apple Frosted Glass) */}
+                <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/20 shadow-2xl text-white">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                    <span className="text-xs font-extrabold truncate">
+                      {currentCoords
+                        ? `📍 已鎖定目前位置 (±${currentCoords.accuracy || 15}m)`
+                        : gpsStatus === 'locating'
+                        ? '📡 正在取得 GPS 座標...'
+                        : '📍 預設商圈中心 (點擊右側重新定位)'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={onRefreshGps}
+                      className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-white transition active:scale-95"
+                    >
+                      🔄 定位
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onOpenCloudConfig}
+                      className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-cyan-200 transition active:scale-95"
+                    >
+                      🔑 金鑰
+                    </button>
+                  </div>
+                </div>
+
+                {/* 醒目懸浮毛玻璃按鈕：「🎲 不知道吃啥？隨機找有開的店」 */}
+                <button
+                  type="button"
+                  disabled={searchingRandom}
+                  onClick={handleRandomOpenRestaurant}
+                  className="w-full py-3.5 px-4 rounded-3xl bg-slate-900/65 hover:bg-slate-900/80 active:scale-[0.98] backdrop-blur-xl border border-white/25 shadow-2xl flex items-center justify-center gap-2.5 text-white transition group cursor-pointer disabled:opacity-60"
+                >
+                  <span className={`text-xl ${searchingRandom ? 'animate-spin' : 'group-hover:rotate-12 transition-transform'}`}>
+                    🎲
+                  </span>
+                  <span className="text-sm font-black tracking-wide bg-gradient-to-r from-white via-emerald-200 to-cyan-200 bg-clip-text text-transparent">
+                    {searchingRandom
+                      ? '正在搜尋 1km 內營業中餐廳...'
+                      : '不知道吃啥？隨機找有開的店'}
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
+                    1km · 營業中
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* 底部懸浮區：Apple 液態毛玻璃餐廳資訊卡 (顯示店名、距離、評分與「⚡ 帶入紀錄」按鈕) */}
+            {selectedRestaurant && (
+              <div className="absolute bottom-4 left-3 right-3 z-20 pointer-events-none">
+                <div className="max-w-lg mx-auto bg-slate-900/65 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-4 text-white pointer-events-auto transition-all">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
+                          🟢 現在營業中
+                        </span>
+                        {selectedRestaurant.distanceM != null && (
+                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-cyan-500/25 text-cyan-200 border border-cyan-400/40">
+                            📍 距離 {selectedRestaurant.distanceM}m
+                          </span>
+                        )}
+                        {selectedRestaurant.rating ? (
+                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-200 border border-amber-400/40">
+                            ★ {selectedRestaurant.rating}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/15">
+                            尚無評分
+                          </span>
+                        )}
+                        {foundPoolCount > 0 && (
+                          <span className="text-[10px] text-slate-300 font-bold">
+                            (周邊 {foundPoolCount} 間候選)
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-base font-black text-white truncate">
+                        🏪 {selectedRestaurant.placeName}
+                      </h3>
+                      {selectedRestaurant.address && (
+                        <p className="text-xs text-slate-300 truncate mt-0.5">
+                          {selectedRestaurant.address}
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRestaurant(null)}
+                      title="關閉卡片"
+                      className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-xs text-slate-200 flex-shrink-0 transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-white/15">
+                    <button
+                      type="button"
+                      disabled={searchingRandom}
+                      onClick={handleRandomOpenRestaurant}
+                      className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-extrabold text-white flex items-center justify-center gap-1.5 transition active:scale-95"
+                    >
+                      <span>🎲</span>
+                      <span>換一間</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onPickPlaceForLog({
+                          mode: 'place',
+                          placeId: selectedRestaurant.placeId,
+                          placeName: selectedRestaurant.placeName,
+                          address: selectedRestaurant.address || '',
+                          lat: selectedRestaurant.lat ?? currentCoords?.lat ?? null,
+                          lng: selectedRestaurant.lng ?? currentCoords?.lng ?? null
+                        })
+                      }
+                      className="col-span-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-1.5 transition active:scale-95"
+                    >
+                      <span>⚡ 帶入紀錄</span>
+                      <span className="text-[11px] font-extrabold">(直達 Step 2)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       );
