@@ -5332,13 +5332,24 @@
               const { Place } = await gmaps.importLibrary('places');
               const place = new Place({ id: event.placeId });
               await place.fetchFields({
-                fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating', 'regularOpeningHours']
+                fields: [
+                  'id',
+                  'displayName',
+                  'formattedAddress',
+                  'location',
+                  'rating',
+                  'regularOpeningHours',
+                  'businessStatus'
+                ]
               });
               const parsed = parseNewPlaceObject(place, currentCoords);
               if (parsed) {
+                const isOpen =
+                  place.businessStatus === 'OPERATIONAL' &&
+                  place.regularOpeningHours?.openNow !== false;
                 setSelectedRestaurant({
                   ...parsed,
-                  openNow: place.regularOpeningHours?.openNow ?? true
+                  openNow: isOpen
                 });
                 mapRef.current.panTo({ lat: parsed.lat, lng: parsed.lng });
               }
@@ -5382,12 +5393,12 @@
           }
           const centerLat = Number(coords?.lat) || 25.033964;
           const centerLng = Number(coords?.lng) || 121.564468;
-          // 每次隨機偏移約 -500m ~ +500m
-          const offsetLat = (Math.random() - 0.5) * 0.009;
-          const offsetLng = (Math.random() - 0.5) * 0.009;
-          const center = { lat: centerLat + offsetLat, lng: centerLng + offsetLng };
 
           const foodKeywords = [
+            '早餐',
+            '早午餐',
+            '午餐',
+            '晚餐',
             '宵夜',
             '小吃',
             '火鍋',
@@ -5401,60 +5412,81 @@
             '水餃',
             '便當',
             '健康餐',
-            '速食'
+            '速食',
+            '餐廳',
+            '美食',
+            '在地小吃',
+            '麵攤',
+            '飯館',
+            '咖啡廳',
+            '甜點'
           ];
-          const randomKeyword = foodKeywords[Math.floor(Math.random() * foodKeywords.length)];
 
           if (mapsReady && window.google?.maps) {
             const gmaps = window.google.maps;
             const { Place } = await gmaps.importLibrary('places');
 
-            const res = await Place.searchByText({
-              textQuery: randomKeyword,
-              fields: [
-                'id',
-                'displayName',
-                'formattedAddress',
-                'location',
-                'rating',
-                'regularOpeningHours',
-                'businessStatus'
-              ],
-              locationBias: {
-                center,
-                radius: 1500
-              },
-              maxResultCount: 20,
-              language: 'zh-TW'
-            });
-            const places = res?.places || [];
+            const MAX_RETRIES = 3;
+            let finalPool = [];
 
-            const openCandidates = places
-              .filter((p) => {
-                // 1. 排除「永久停業」或「暫時停業」的店家
-                if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
+            for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+              // 每次迴圈隨機偏移約 -500m ~ +500m 並隨機抽字
+              const offsetLat = (Math.random() - 0.5) * 0.009;
+              const offsetLng = (Math.random() - 0.5) * 0.009;
+              const center = { lat: centerLat + offsetLat, lng: centerLng + offsetLng };
+              const randomKeyword = foodKeywords[Math.floor(Math.random() * foodKeywords.length)];
 
-                // 2. 只有在「明確有營業時間資料」且「明確標示打烊」時，才將其過濾
-                if (p.regularOpeningHours && p.regularOpeningHours.openNow === false) return false;
+              const res = await Place.searchByText({
+                textQuery: randomKeyword,
+                fields: [
+                  'id',
+                  'displayName',
+                  'formattedAddress',
+                  'location',
+                  'rating',
+                  'regularOpeningHours',
+                  'businessStatus'
+                ],
+                locationBias: {
+                  center,
+                  radius: 1500
+                },
+                maxResultCount: 20,
+                language: 'zh-TW'
+              });
+              const places = res?.places || [];
 
-                // 3. 其他狀況（明確營業中，或是 Google 根本沒有時間資料的在地小吃攤）一律放行！
-                return true;
-              })
-              .map((p) => {
-                const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
-                if (!parsed) return null;
-                return {
-                  ...parsed,
-                  // 介面顯示用的狀態：若沒資料則預設當作 true (營業中)
-                  openNow: p.regularOpeningHours?.openNow ?? true
-                };
-              })
-              .filter(Boolean);
+              const openCandidates = places
+                .filter((p) => {
+                  // 1. 排除「永久停業」或「暫時停業」的店家
+                  if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
 
-            const finalPool = openCandidates;
+                  // 2. 只有在「明確有營業時間資料」且「明確標示打烊」時，才將其過濾
+                  if (p.regularOpeningHours && p.regularOpeningHours.openNow === false) return false;
+
+                  // 3. 其他狀況（明確營業中，或是 Google 根本沒有時間資料的在地小吃攤）一律放行！
+                  return true;
+                })
+                .map((p) => {
+                  const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
+                  if (!parsed) return null;
+                  // 距離守門員：確認距離 <= 2000m，超過 2km 直接排除
+                  if (parsed.distanceM == null || parsed.distanceM > 2000) return null;
+                  return {
+                    ...parsed,
+                    openNow: p.regularOpeningHours?.openNow ?? true
+                  };
+                })
+                .filter(Boolean);
+
+              if (openCandidates.length > 0) {
+                finalPool = openCandidates;
+                break;
+              }
+            }
 
             if (finalPool.length === 0) {
-              showToast?.(`附近 1.5km 內暫無營業中的「${randomKeyword}」店家，請再按一次隨機換個關鍵字！`, 'error');
+              showToast?.('連抽 3 次 2km 內皆無營業中店家，附近可能真的都打烊了，請稍後再試！', 'error');
               setSearchingRandom(false);
               return;
             }
@@ -5666,9 +5698,15 @@
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
-                          🟢 現在營業中
-                        </span>
+                        {selectedRestaurant.openNow ? (
+                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
+                            🟢 現在營業中
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/40">
+                            🔴 已打烊 / 無營業
+                          </span>
+                        )}
                         {selectedRestaurant.distanceM != null && (
                           <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-cyan-500/25 text-cyan-200 border border-cyan-400/40">
                             📍 距離 {selectedRestaurant.distanceM}m
