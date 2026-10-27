@@ -3382,15 +3382,15 @@
                 />
               )}
 
-              {/* 手機底部大按鈕導覽列（3 個按鈕：📊 儀表板、📸 紀錄、🗺️ 地圖探索，採用 Apple 液態毛玻璃風格） */}
-              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#070B12]/80 backdrop-blur-2xl border-t border-slate-700/50 shadow-2xl px-3 py-2">
-                <div className="max-w-lg mx-auto grid grid-cols-3 gap-2">
+              {/* 手機底部大按鈕導覽列（3 個全懸浮毛玻璃按鈕：📊 儀表板、📸 紀錄、🗺️ 地圖探索） */}
+              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-transparent border-none pointer-events-none px-3 py-2">
+                <div className="max-w-lg mx-auto grid grid-cols-3 gap-2 pointer-events-auto">
                   <button
                     onClick={() => setActiveBottomTab('dashboard')}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 ${
+                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 backdrop-blur-xl shadow-2xl ${
                       activeBottomTab === 'dashboard'
-                        ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/50 shadow-lg backdrop-blur-xl'
-                        : 'bg-white/5 text-slate-300 hover:text-white border border-white/10 hover:bg-white/10'
+                        ? 'bg-slate-900/85 text-emerald-300 border border-emerald-400/60'
+                        : 'bg-slate-900/70 text-slate-200 hover:text-white border border-white/20 hover:bg-slate-900/85'
                     }`}
                   >
                     <span className="text-base">📊</span>
@@ -3404,10 +3404,10 @@
                         setAddStep(1);
                       }
                     }}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 ${
+                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 backdrop-blur-xl shadow-2xl ${
                       activeBottomTab === 'add'
-                        ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/25 border border-white/30'
-                        : 'bg-white/5 text-emerald-300 hover:text-emerald-200 border border-white/10 hover:bg-white/10'
+                        ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 border border-white/40'
+                        : 'bg-slate-900/70 text-emerald-300 hover:text-emerald-200 border border-white/20 hover:bg-slate-900/85'
                     }`}
                   >
                     <span className="text-base">📸</span>
@@ -3416,10 +3416,10 @@
 
                   <button
                     onClick={() => setActiveBottomTab('map')}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 ${
+                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 backdrop-blur-xl shadow-2xl ${
                       activeBottomTab === 'map'
-                        ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/50 shadow-lg backdrop-blur-xl'
-                        : 'bg-white/5 text-slate-300 hover:text-white border border-white/10 hover:bg-white/10'
+                        ? 'bg-slate-900/85 text-cyan-300 border border-cyan-400/60'
+                        : 'bg-slate-900/70 text-slate-200 hover:text-white border border-white/20 hover:bg-slate-900/85'
                     }`}
                   >
                     <span className="text-base">🗺️</span>
@@ -5420,7 +5420,7 @@
               });
               places = res?.places || [];
             } catch (primaryErr) {
-              // 相容性自動降級：若 Places API (New) 因 fast_food 型別名稱或參數格式拋錯，改用標準 Table A 型別查詢並過濾營業中
+              // 相容性自動降級：若 Places API (New) 因 fast_food 型別名稱或參數格式拋錯，改用標準 Table A 型別查詢並嚴格限定 openNow: true
               console.warn('Primary searchNearby retry with standard Table A types:', primaryErr);
               const fallbackRes = await Place.searchNearby({
                 fields: [
@@ -5437,12 +5437,13 @@
                   radius: 1000
                 },
                 includedPrimaryTypes: ['restaurant', 'meal_takeaway', 'fast_food_restaurant'],
+                openNow: true,
                 maxResultCount: 20
               });
               places = fallbackRes?.places || [];
             }
 
-            // 過濾確保營業中且解析欄位
+            // 嚴格過濾確保營業中且解析欄位
             const openCandidates = places
               .filter((p) => {
                 if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
@@ -5454,15 +5455,12 @@
                 if (!parsed) return null;
                 return {
                   ...parsed,
-                  openNow: p.regularOpeningHours?.openNow ?? true
+                  openNow: true
                 };
               })
               .filter(Boolean);
 
-            const finalPool =
-              openCandidates.length > 0
-                ? openCandidates
-                : places.map((p) => parseNewPlaceObject(p, { lat: centerLat, lng: centerLng })).filter(Boolean);
+            const finalPool = openCandidates;
 
             if (finalPool.length === 0) {
               showToast?.('附近 1000m 內暫無符合條件且營業中的餐廳，請移動地圖或稍後再試', 'error');
@@ -5575,8 +5573,8 @@
 
       return (
         <div className="fixed inset-0 z-30 flex flex-col bg-slate-100 overflow-hidden select-none">
-          {/* 全螢幕明亮淺色 Google Map 底圖 (高度佔滿全螢幕，底部導覽列浮動於上方呈現液態毛玻璃穿透感) */}
-          <div className="relative w-full h-[calc(100dvh-68px)] flex-1">
+          {/* 全螢幕明亮淺色 Google Map 底圖 (徹底佔滿全螢幕，避免手機瀏覽器 dvh 計算問題) */}
+          <div className="absolute inset-0 w-full h-full">
             {savedMapsKey && !mapsError ? (
               <div ref={mapContainerRef} className="w-full h-full bg-slate-100" />
             ) : (
@@ -5670,9 +5668,9 @@
               </div>
             </div>
 
-            {/* 底部懸浮區：Apple 液態毛玻璃餐廳資訊卡 (顯示店名、距離、評分與「⚡ 帶入紀錄」按鈕) */}
+            {/* 底部懸浮區：Apple 液態毛玻璃餐廳資訊卡 (顯示店名、距離、評分與「⚡ 帶入紀錄」按鈕，浮動於底部導覽列之上) */}
             {selectedRestaurant && (
-              <div className="absolute bottom-4 left-3 right-3 z-20 pointer-events-none">
+              <div className="absolute bottom-24 left-3 right-3 z-20 pointer-events-none">
                 <div className="max-w-lg mx-auto bg-slate-900/65 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-4 text-white pointer-events-auto transition-all">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
