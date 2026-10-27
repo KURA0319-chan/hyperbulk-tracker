@@ -4703,36 +4703,27 @@
         });
       };
 
-      // 使用新版 Places API (New): Place.searchNearby() 搜尋附近餐廳
+      // 使用新版 Places API (New): Place.searchByText() 搜尋附近餐廳
       const fetchNearbyFoodPlaces = async (gmaps, map, centerPos) => {
         if (!gmaps || !map) return;
         setSearchingPlaces(true);
         try {
-          const { Place, SearchNearbyRankPreference } = await gmaps.importLibrary('places');
+          const { Place } = await gmaps.importLibrary('places');
           const request = {
+            textQuery: '餐廳 小吃 便利商店 早午餐',
             fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating'],
-            locationRestriction: {
+            locationBias: {
               center: {
                 lat: Number(centerPos.lat),
                 lng: Number(centerPos.lng)
               },
               radius: 350
             },
-            includedPrimaryTypes: [
-              'restaurant',
-              'meal_takeaway',
-              'cafe',
-              'bakery',
-              'convenience_store'
-            ],
             maxResultCount: 12,
             language: 'zh-TW'
           };
-          if (SearchNearbyRankPreference?.DISTANCE) {
-            request.rankPreference = SearchNearbyRankPreference.DISTANCE;
-          }
 
-          const { places } = await Place.searchNearby(request);
+          const { places } = await Place.searchByText(request);
           if (Array.isArray(places) && places.length > 0) {
             const formatted = places
               .map((p) => parseNewPlaceObject(p, centerPos))
@@ -4741,7 +4732,7 @@
             renderPlaceMarkers(formatted, gmaps, map);
           }
         } catch (err) {
-          console.warn('Places API (New) searchNearby 失敗:', err);
+          console.warn('Places API (New) searchByText 失敗:', err);
         } finally {
           setSearchingPlaces(false);
         }
@@ -5391,64 +5382,40 @@
           }
           const centerLat = Number(coords?.lat) || 25.033964;
           const centerLng = Number(coords?.lng) || 121.564468;
-          const center = { lat: centerLat, lng: centerLng };
+          // 每次隨機偏移約 -500m ~ +500m
+          const offsetLat = (Math.random() - 0.5) * 0.009;
+          const offsetLng = (Math.random() - 0.5) * 0.009;
+          const center = { lat: centerLat + offsetLat, lng: centerLng + offsetLng };
 
           if (mapsReady && window.google?.maps) {
             const gmaps = window.google.maps;
             const { Place } = await gmaps.importLibrary('places');
 
-            let places = [];
-            try {
-              // 優先依照規格呼叫 Place.searchNearby (半徑 1000m、includedPrimaryTypes、openNow: true)
-              const res = await Place.searchNearby({
-                fields: [
-                  'id',
-                  'displayName',
-                  'formattedAddress',
-                  'location',
-                  'rating',
-                  'regularOpeningHours',
-                  'businessStatus'
-                ],
-                locationRestriction: {
-                  center,
-                  radius: 1000
-                },
-                includedPrimaryTypes: ['restaurant', 'meal_takeaway', 'fast_food'],
-                openNow: true,
-                maxResultCount: 20
-              });
-              places = res?.places || [];
-            } catch (primaryErr) {
-              // 相容性自動降級：若 Places API (New) 因 fast_food 型別名稱或參數格式拋錯，改用標準 Table A 型別查詢並嚴格限定 openNow: true
-              console.warn('Primary searchNearby retry with standard Table A types:', primaryErr);
-              const fallbackRes = await Place.searchNearby({
-                fields: [
-                  'id',
-                  'displayName',
-                  'formattedAddress',
-                  'location',
-                  'rating',
-                  'regularOpeningHours',
-                  'businessStatus'
-                ],
-                locationRestriction: {
-                  center,
-                  radius: 1000
-                },
-                includedPrimaryTypes: ['restaurant', 'meal_takeaway', 'fast_food_restaurant'],
-                openNow: true,
-                maxResultCount: 20
-              });
-              places = fallbackRes?.places || [];
-            }
+            const res = await Place.searchByText({
+              textQuery: '餐廳 小吃 宵夜 美食',
+              fields: [
+                'id',
+                'displayName',
+                'formattedAddress',
+                'location',
+                'rating',
+                'regularOpeningHours',
+                'businessStatus'
+              ],
+              locationBias: {
+                center,
+                radius: 1000
+              },
+              maxResultCount: 20,
+              language: 'zh-TW'
+            });
+            const places = res?.places || [];
 
-            // 嚴格過濾確保營業中且解析欄位
+            // 嚴格過濾確保營業中 (p.regularOpeningHours?.openNow === true) 且解析欄位
             const openCandidates = places
               .filter((p) => {
                 if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
-                if (p.regularOpeningHours && p.regularOpeningHours.openNow === false) return false;
-                return true;
+                return p.regularOpeningHours?.openNow === true;
               })
               .map((p) => {
                 const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
