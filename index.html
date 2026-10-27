@@ -5270,6 +5270,7 @@
       const [searchingRandom, setSearchingRandom] = useState(false);
       const [selectedRestaurant, setSelectedRestaurant] = useState(null);
       const [foundPoolCount, setFoundPoolCount] = useState(0);
+      const [shownPlaceIds, setShownPlaceIds] = useState([]);
 
       const mapContainerRef = useRef(null);
       const mapRef = useRef(null);
@@ -5416,20 +5417,15 @@
               let foodKeywords = [];
 
               if (currentHour >= 5 && currentHour < 11) {
-                // 早上 (05:00 - 10:59)
-                foodKeywords = ['早餐', '早午餐', '蛋餅', '咖啡廳', '飯糰', '三明治', '速食'];
+                foodKeywords = ['早餐', '早午餐', '蛋餅', '飯糰', '三明治', '漢堡', '吐司', '燒餅油條', '麵線', '包子', '清粥小菜'];
               } else if (currentHour >= 11 && currentHour < 14) {
-                // 中午 (11:00 - 13:59)
-                foodKeywords = ['午餐', '便當', '麵攤', '水餃', '餐廳', '健康餐', '火鍋', '牛肉麵', '速食', '小吃', '飯館'];
+                foodKeywords = ['午餐', '便當', '麵攤', '水餃', '自助餐', '健康餐', '火鍋', '牛肉麵', '炒飯', '排骨飯', '火雞肉飯', '鍋燒意麵', '咖哩', '壽司', '義大利麵'];
               } else if (currentHour >= 14 && currentHour < 17) {
-                // 下午 (14:00 - 16:59)
-                foodKeywords = ['下午茶', '甜點', '咖啡廳', '速食', '小吃', '炸物', '麵攤'];
+                foodKeywords = ['下午茶', '甜點', '咖啡廳', '速食', '小吃', '炸物', '車輪餅', '地瓜球', '蔥抓餅', '豆花'];
               } else if (currentHour >= 17 && currentHour < 22) {
-                // 晚上 (17:00 - 21:59)
-                foodKeywords = ['晚餐', '餐廳', '火鍋', '拉麵', '快炒', '牛肉麵', '便當', '健康餐', '速食', '飯館', '美食', '在地小吃'];
+                foodKeywords = ['晚餐', '火鍋', '拉麵', '熱炒', '牛肉麵', '便當', '健康餐', '壽司', '義大利麵', '滷肉飯', '水餃', '排餐', '燒肉', '泰式'];
               } else {
-                // 宵夜 (22:00 - 04:59)
-                foodKeywords = ['宵夜', '炸物', '炸雞', '串燒', '滷味', '拉麵', '速食', '小吃', '清粥小菜'];
+                foodKeywords = ['宵夜', '鹽酥雞', '炸物', '串燒', '滷味', '拉麵', '速食', '麻辣燙', '臭豆腐', '清粥小菜', '泡麵', '湯圓'];
               }
 
               const randomKeyword = foodKeywords[Math.floor(Math.random() * foodKeywords.length)];
@@ -5491,15 +5487,21 @@
 
             setFoundPoolCount(finalPool.length);
 
-            // 若池子大於 1 間，盡量避免連續抽中同一間
-            let poolToPick = finalPool;
-            if (finalPool.length > 1 && selectedRestaurant?.placeId) {
-              const filtered = finalPool.filter((item) => item.placeId !== selectedRestaurant.placeId);
-              if (filtered.length > 0) poolToPick = filtered;
+            // 過濾掉這次網頁開啟期間已經抽過的所有餐廳
+            let poolToPick = finalPool.filter((item) => !shownPlaceIds.includes(item.placeId));
+
+            // 如果附近符合的餐廳已經全部被抽過一輪了（池子乾了），就清空記憶重新洗牌
+            if (poolToPick.length === 0) {
+              poolToPick = finalPool;
+              setShownPlaceIds([]); // 重新洗牌
+              showToast?.('附近餐廳已全數探索完畢，系統已為您重新洗牌！');
             }
 
             const randomIndex = Math.floor(Math.random() * poolToPick.length);
             const chosen = poolToPick[randomIndex];
+
+            // 將這次抽中的餐廳加入記憶清單
+            setShownPlaceIds((prev) => [...prev, chosen.placeId]);
 
             // 清除舊標記並在地图上標示所有候選與當前抽中餐廳
             placeMarkersRef.current.forEach((m) => m.setMap(null));
