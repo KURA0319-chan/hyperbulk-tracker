@@ -5387,12 +5387,31 @@
           const offsetLng = (Math.random() - 0.5) * 0.009;
           const center = { lat: centerLat + offsetLat, lng: centerLng + offsetLng };
 
+          const foodKeywords = [
+            '宵夜',
+            '小吃',
+            '火鍋',
+            '拉麵',
+            '滷味',
+            '炸雞',
+            '炸物',
+            '串燒',
+            '快炒',
+            '牛肉麵',
+            '水餃',
+            '便當',
+            '健康餐',
+            '速食'
+          ];
+          const randomKeyword = foodKeywords[Math.floor(Math.random() * foodKeywords.length)];
+
           if (mapsReady && window.google?.maps) {
             const gmaps = window.google.maps;
             const { Place } = await gmaps.importLibrary('places');
 
             const res = await Place.searchByText({
-              textQuery: '餐廳 小吃 宵夜 美食',
+              textQuery: randomKeyword,
+              openNow: true,
               fields: [
                 'id',
                 'displayName',
@@ -5404,19 +5423,16 @@
               ],
               locationBias: {
                 center,
-                radius: 1000
+                radius: 1500
               },
               maxResultCount: 20,
               language: 'zh-TW'
             });
             const places = res?.places || [];
 
-            // 嚴格過濾確保營業中 (p.regularOpeningHours?.openNow === true) 且解析欄位
+            // 伺服器端已透過 openNow: true 過濾營業狀態，前端僅需確認 businessStatus === 'OPERATIONAL'
             const openCandidates = places
-              .filter((p) => {
-                if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
-                return p.regularOpeningHours?.openNow === true;
-              })
+              .filter((p) => p.businessStatus === 'OPERATIONAL')
               .map((p) => {
                 const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
                 if (!parsed) return null;
@@ -5430,7 +5446,7 @@
             const finalPool = openCandidates;
 
             if (finalPool.length === 0) {
-              showToast?.('附近 1000m 內暫無符合條件且營業中的餐廳，請移動地圖或稍後再試', 'error');
+              showToast?.(`附近 1.5km 內暫無營業中的「${randomKeyword}」店家，請再按一次隨機換個關鍵字！`, 'error');
               setSearchingRandom(false);
               return;
             }
