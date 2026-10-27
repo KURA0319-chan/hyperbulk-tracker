@@ -5429,19 +5429,24 @@
             });
             const places = res?.places || [];
 
-            // 前端嚴格過濾：確認 p.businessStatus === 'OPERATIONAL' 且 p.regularOpeningHours?.openNow === true
             const openCandidates = places
-              .filter(
-                (p) =>
-                  p.businessStatus === 'OPERATIONAL' &&
-                  p.regularOpeningHours?.openNow === true
-              )
+              .filter((p) => {
+                // 1. 排除「永久停業」或「暫時停業」的店家
+                if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
+
+                // 2. 只有在「明確有營業時間資料」且「明確標示打烊」時，才將其過濾
+                if (p.regularOpeningHours && p.regularOpeningHours.openNow === false) return false;
+
+                // 3. 其他狀況（明確營業中，或是 Google 根本沒有時間資料的在地小吃攤）一律放行！
+                return true;
+              })
               .map((p) => {
                 const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
                 if (!parsed) return null;
                 return {
                   ...parsed,
-                  openNow: true
+                  // 介面顯示用的狀態：若沒資料則預設當作 true (營業中)
+                  openNow: p.regularOpeningHours?.openNow ?? true
                 };
               })
               .filter(Boolean);
