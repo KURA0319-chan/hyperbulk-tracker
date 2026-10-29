@@ -1077,17 +1077,15 @@
       const [showFavManager, setShowFavManager] = useState(false);
       const [showAddFavorites, setShowAddFavorites] = useState(false);
 
-      // 以地點為中心 (Location-First) 的兩階段紀錄動線狀態
-      const [addStep, setAddStep] = useState(1); // 1: Step 1 選擇地點 | 2: Step 2 歷史菜單與新增餐點
+      // 輕量化地點綁定狀態 (Background Binding: 'place' | 'none' | 'custom_gps')
       const [selectedPlace, setSelectedPlace] = useState({
-        mode: 'none', // 'place' | 'none' | 'custom_gps'
+        mode: 'none',
         placeId: null,
-        placeName: '🏠 無特定店家 / 小零食 / 自行烹飪',
+        placeName: '',
         address: '',
         lat: null,
         lng: null
       });
-      const [showNewDishForm, setShowNewDishForm] = useState(false);
       const [mapsKeyVersion, setMapsKeyVersion] = useState(0);
 
       const [toastMessage, setToastMessage] = useState(null);
@@ -1435,27 +1433,46 @@
         return Array.from(matchedMap.values());
       }, [selectedPlace, allHistoricalLogsFlat, favorites]);
 
-      // Step 1 或地圖探索選擇地點後進入「📸 紀錄」的 Step 2
+      // 地圖探索選擇地點後，綁定店家並直接切換至「📸 紀錄」分頁
       const handleSelectPlaceInStep1 = (placeObj) => {
+        if (!placeObj || placeObj.mode === 'none') {
+          setSelectedPlace({
+            mode: 'none',
+            placeId: null,
+            placeName: '',
+            address: '',
+            lat: null,
+            lng: null
+          });
+          setActiveBottomTab('add');
+          return;
+        }
         const nextPlace = {
           mode: placeObj.mode || 'place',
           placeId: placeObj.placeId || null,
           placeName:
             placeObj.placeName ||
-            (placeObj.mode === 'none'
-              ? '🏠 無特定店家 / 小零食 / 自行烹飪'
-              : '📍 自訂當前位置'),
+            (placeObj.mode === 'custom_gps' ? '' : '已選取店家'),
           address: placeObj.address || '',
-          lat: placeObj.lat ?? null,
-          lng: placeObj.lng ?? null
+          lat: placeObj.lat ?? currentCoords?.lat ?? null,
+          lng: placeObj.lng ?? currentCoords?.lng ?? null
         };
         setSelectedPlace(nextPlace);
         setActiveBottomTab('add');
-        setAddStep(2);
-        setShowNewDishForm(nextPlace.mode === 'none');
         setTimeout(() => {
           formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 80);
+      };
+
+      const handleClearSelectedPlace = () => {
+        setSelectedPlace({
+          mode: 'none',
+          placeId: null,
+          placeName: '',
+          address: '',
+          lat: null,
+          lng: null
+        });
       };
 
       const populateFormWithFood = (food, isAi = false) => {
@@ -1485,7 +1502,7 @@
           setSelectedPlace({
             mode: food.placeId ? 'place' : 'custom_gps',
             placeId: food.placeId || null,
-            placeName: food.placeName || '已綁定地點',
+            placeName: food.placeName || '',
             address: food.address || '',
             lat: food.lat ?? null,
             lng: food.lng ?? null
@@ -1493,8 +1510,6 @@
         }
 
         setActiveBottomTab('add');
-        setAddStep(2);
-        setShowNewDishForm(true);
         setTimeout(() => {
           formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -1519,14 +1534,14 @@
           food.lat !== undefined
             ? food.lat
             : selectedPlace.mode !== 'none'
-              ? selectedPlace.lat
-              : null;
+              ? selectedPlace.lat ?? currentCoords?.lat ?? null
+              : currentCoords?.lat ?? null;
         const boundLng =
           food.lng !== undefined
             ? food.lng
             : selectedPlace.mode !== 'none'
-              ? selectedPlace.lng
-              : null;
+              ? selectedPlace.lng ?? currentCoords?.lng ?? null
+              : currentCoords?.lng ?? null;
 
         const newEntry = {
           id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1599,7 +1614,7 @@
           setSelectedPlace({
             mode: item.placeId ? 'place' : 'custom_gps',
             placeId: item.placeId || null,
-            placeName: item.placeName || '已綁定地點',
+            placeName: item.placeName || '',
             address: '',
             lat: item.lat ?? null,
             lng: item.lng ?? null
@@ -1608,15 +1623,13 @@
           setSelectedPlace({
             mode: 'none',
             placeId: null,
-            placeName: '🏠 無特定店家 / 小零食 / 自行烹飪',
+            placeName: '',
             address: '',
             lat: null,
             lng: null
           });
         }
         setActiveBottomTab('add');
-        setAddStep(2);
-        setShowNewDishForm(true);
         setTimeout(() => {
           formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -1638,8 +1651,6 @@
         });
         setBaseFormValues(null);
         setPortionScale(1);
-        setAddStep(1);
-        setShowNewDishForm(false);
       };
 
       const handleAddRecordSubmit = async (e) => {
@@ -1665,15 +1676,17 @@
         const boundPlaceId =
           selectedPlace.mode !== 'none' ? selectedPlace.placeId || null : null;
         const boundPlaceName =
-          selectedPlace.mode !== 'none' ? selectedPlace.placeName || '' : '';
+          selectedPlace.mode !== 'none'
+            ? selectedPlace.placeName || (selectedPlace.mode === 'custom_gps' ? 'GPS 智慧座標' : '')
+            : '';
         const boundLat =
           selectedPlace.mode !== 'none'
             ? selectedPlace.lat ?? currentCoords?.lat ?? null
-            : null;
+            : currentCoords?.lat ?? null;
         const boundLng =
           selectedPlace.mode !== 'none'
             ? selectedPlace.lng ?? currentCoords?.lng ?? null
-            : null;
+            : currentCoords?.lng ?? null;
 
         if (editingLogId) {
           nextList = dailyItems.map((item) =>
@@ -1693,7 +1706,6 @@
                   lng: boundLng ?? item.lng ?? null,
                   aiRecognized: formState.aiRecognized,
                   aiNotes: formState.aiNotes || ''
-                  // 保留原本建立的時間 item.createdAt
                 }
               : item
           );
@@ -1742,8 +1754,6 @@
         setPortionScale(1);
         setAiPreviewUrl('');
         setAiImagePayload(null);
-        setAddStep(1);
-        setShowNewDishForm(false);
         showToast(
           wasEditing
             ? `✅ 已更新「${trimmedName}」並同步至雲端`
@@ -2081,9 +2091,152 @@
               showToast={showToast}
             />
           ) : (
-            <div className="max-w-lg mx-auto min-h-screen flex flex-col">
-              {/* 頂部導覽與橫向滑動日曆 */}
-              <header className="sticky top-0 z-30 bg-[#070B12]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 pt-3 pb-2.5">
+            <div className="w-full max-w-[1440px] mx-auto min-h-screen flex flex-col md:flex-row relative">
+              {/* 電腦版左側邊欄 (Desktop Sidebar) */}
+              <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 border-r border-slate-800/80 bg-[#070B12]/90 backdrop-blur-xl p-5 z-40 justify-between">
+                {/* 側邊欄頂部：PRO LOGO、標題與使用者資訊 */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 flex-shrink-0">
+                      PRO
+                    </div>
+                    <div className="min-w-0">
+                      <h1 className="text-base font-extrabold tracking-tight text-white truncate">
+                        HYPERBULK
+                      </h1>
+                      <p className="text-[11px] text-emerald-400 font-bold truncate">
+                        增肌營養追蹤系統
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold text-white truncate">
+                        👤 {user.displayName}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
+                        {dailyMeta.isTrainingDay ? '💪 訓練日' : '🛌 休息日'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      TDEE {targets.tdee} · 目標{' '}
+                      <strong className="text-emerald-300">{targets.targetCalories}</strong> kcal
+                    </p>
+                  </div>
+                </div>
+
+                {/* 側邊欄中段：三個主要導覽按鈕（電腦版樣式）與日期快捷切換 */}
+                <div className="flex-1 py-6 space-y-2.5 flex flex-col justify-center">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-2">
+                    MAIN NAVIGATION
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveBottomTab('dashboard')}
+                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition cursor-pointer ${
+                      activeBottomTab === 'dashboard'
+                        ? 'bg-gradient-to-r from-emerald-500/25 to-cyan-500/15 text-emerald-300 border border-emerald-400/50 shadow-lg shadow-emerald-500/10'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-lg">📊</span>
+                      <span>儀表板</span>
+                    </span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                      {dailyItems.length} 筆
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveBottomTab('add')}
+                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition cursor-pointer ${
+                      activeBottomTab === 'add'
+                        ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-lg">📸</span>
+                      <span>紀錄</span>
+                    </span>
+                    {selectedPlace.mode !== 'none' && (
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          activeBottomTab === 'add'
+                            ? 'bg-slate-950/20 text-slate-950'
+                            : 'bg-cyan-500/20 text-cyan-300'
+                        }`}
+                      >
+                        📍 已綁定
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveBottomTab('map')}
+                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition cursor-pointer ${
+                      activeBottomTab === 'map'
+                        ? 'bg-gradient-to-r from-cyan-500/25 to-emerald-500/15 text-cyan-300 border border-cyan-400/50 shadow-lg shadow-cyan-500/10'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-lg">🗺️</span>
+                      <span>地圖探索</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                      🎲 盲盒
+                    </span>
+                  </button>
+                </div>
+
+                {/* 側邊欄底部：🔑 API 設定、⚙️ 目標設定與登出按鈕 */}
+                <div className="space-y-2 pt-4 border-t border-slate-800/80">
+                  <button
+                    type="button"
+                    onClick={() => setShowCloudModal(true)}
+                    className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-extrabold border transition flex items-center justify-between cursor-pointer active:scale-95 ${
+                      getSavedGeminiKey()
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                    }`}
+                  >
+                    <span>🔑 API / 雲端設定</span>
+                    <span className="text-[10px]">{getSavedGeminiKey() ? '已設定' : '待設定'}</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowOnboarding(true)}
+                      className="py-2.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-slate-700 transition active:scale-95"
+                    >
+                      ⚙️ 目標設定
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const fb = initFirebaseClient();
+                        if (fb?.auth) await signOut(fb.auth).catch(() => {});
+                        localStorage.removeItem(STORAGE_KEYS.LOCAL_USER);
+                        setUser(null);
+                        setProfile(null);
+                      }}
+                      className="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-bold transition"
+                    >
+                      登出
+                    </button>
+                  </div>
+                </div>
+              </aside>
+
+              {/* 手機版頂部導覽與橫向滑動日曆 (md:hidden 僅在手機版顯示) */}
+              <header className="md:hidden sticky top-0 z-30 bg-[#070B12]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 pt-3 pb-2.5">
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20">
@@ -2218,253 +2371,622 @@
                 </div>
               </header>
 
-              {/* 主內容區 */}
-              <main className="flex-1 px-4 pt-4 space-y-5">
-                {/* 0. 📍 附近常吃推薦 (GPS 20m Haversine 精準防擾，由近到遠最多顯示前 3 筆) */}
-                <section className="bg-gradient-to-r from-slate-900 via-[#0E172A] to-slate-900 border border-cyan-500/30 rounded-3xl p-3.5 shadow-xl space-y-2.5">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-black text-white flex items-center gap-1.5">
-                        <span>📍 附近常吃推薦</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold">
-                          20m 精準感應 · Top 3
-                        </span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => refreshGpsLocation(false)}
-                        className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 border border-slate-700 transition active:scale-95"
-                      >
-                        {gpsStatus === 'locating' ? '定位中...' : '🔄 重新定位'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSimulateNearby20m}
-                        title="模擬抵達常吃店家門口 20 公尺內，測試 Haversine 距離排序與 Top 3 推薦"
-                        className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-[11px] font-extrabold text-emerald-300 border border-emerald-500/30 transition active:scale-95"
-                      >
-                        🧪 模擬抵達店門口
-                      </button>
-                      {favorites.length > 0 && (
+              {/* 主內容區 (Main Content) */}
+              <main className="flex-1 md:ml-64 px-4 md:px-8 pt-4 pb-28 md:pb-8 flex flex-col min-h-screen overflow-x-hidden space-y-5">
+                {/* 電腦版頂部日期與橫向日曆列 (僅在電腦版且非地圖分頁時顯示，方便快速切換日期) */}
+                {activeBottomTab !== 'map' && (
+                  <div className="hidden md:block bg-slate-900/70 border border-slate-800/80 rounded-3xl p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setShowFavManager((v) => !v)}
-                          className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-amber-300 border border-slate-700 transition"
+                          onClick={() => setSelectedDate(formatDateKey(new Date()))}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                            selectedDate === formatDateKey(new Date())
+                              ? 'bg-emerald-500 text-slate-950'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
                         >
-                          ⭐ 常吃庫 ({favorites.length})
+                          今天
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const d = new Date(selectedDate + 'T00:00:00');
+                            d.setDate(d.getDate() - 1);
+                            setSelectedDate(formatDateKey(d));
+                          }}
+                          title="前一天"
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                        >
+                          ◀
+                        </button>
+                        <span className="text-sm font-black text-white px-1">{selectedDate}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const d = new Date(selectedDate + 'T00:00:00');
+                            d.setDate(d.getDate() + 1);
+                            setSelectedDate(formatDateKey(d));
+                          }}
+                          title="後一天"
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                        >
+                          ▶
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowCalendarModal(true)}
+                        className="flex items-center gap-1.5 text-xs font-extrabold text-cyan-300 bg-slate-950 hover:bg-slate-800 border border-cyan-500/40 px-3.5 py-2 rounded-xl cursor-pointer shadow-sm transition active:scale-95"
+                      >
+                        <span>📅 選擇日期</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 scroll-smooth">
+                      {calendarDays.map((d) => {
+                        const isSelected = d.dateStr === selectedDate;
+                        return (
+                          <button
+                            key={d.dateStr}
+                            onClick={() => setSelectedDate(d.dateStr)}
+                            className={`flex-shrink-0 min-w-[52px] py-2 px-2.5 rounded-2xl border flex flex-col items-center justify-center transition-all active:scale-95 ${
+                              isSelected
+                                ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 border-emerald-300 shadow-lg shadow-emerald-500/25 font-black'
+                                : d.isToday
+                                ? 'bg-slate-800/90 text-emerald-300 border-emerald-500/40'
+                                : 'bg-slate-950/70 text-slate-400 border-slate-800/80 hover:border-slate-700'
+                            }`}
+                          >
+                            <span className={`text-[10px] font-bold ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
+                              週{d.weekday}
+                            </span>
+                            <span className="text-sm font-extrabold leading-tight mt-0.5">{d.dayNumber}</span>
+                            <div className="mt-1 flex items-center gap-1 h-1.5">
+                              {d.hasLogs && (
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    isSelected ? 'bg-slate-950' : d.isGoalMet ? 'bg-emerald-400' : 'bg-amber-400'
+                                  }`}
+                                />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
+                )}
 
-                  {nearbyFavorites.length > 0 ? (
-                    <div className="flex items-stretch gap-2.5 overflow-x-auto no-scrollbar py-1 scroll-smooth">
-                      {nearbyFavorites.map((fav, idx) => (
-                        <div
-                          key={fav.id}
-                          className="flex-shrink-0 w-64 bg-slate-950/95 border border-emerald-500/40 rounded-2xl p-3 flex flex-col justify-between gap-2 shadow-lg shadow-emerald-500/5"
-                        >
-                          <div>
-                            <div className="flex items-center justify-between gap-1 mb-1">
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                #{idx + 1} 距離 {fav.distanceMeters.toFixed(1)}m
+                {/* ==================== TAB 1: 📊 儀表板 (Dashboard 雙欄設計) ==================== */}
+                {activeBottomTab === 'dashboard' && (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
+                    {/* 左側 (md:col-span-5)：熱量與營養素圓環卡片、喝水進度、智慧達標補給建議、20m 附近常吃推薦 */}
+                    <div className="md:col-span-5 space-y-4">
+                      <DashboardCard
+                        selectedDate={selectedDate}
+                        dailyTotals={dailyTotals}
+                        targets={targets}
+                        isTrainingDay={dailyMeta.isTrainingDay}
+                        onToggleTrainingDay={handleToggleTrainingDay}
+                        waterMl={dailyMeta.waterMl}
+                        onAddWater={handleAddWater}
+                        userWeight={Number(profile?.weight) || 70}
+                        onQuickAdd={quickAddFoodDirectly}
+                      />
+
+                      {/* 📍 附近常吃推薦 (GPS 20m Haversine 精準防擾，由近到遠最多顯示前 3 筆) */}
+                      <section className="bg-gradient-to-r from-slate-900 via-[#0E172A] to-slate-900 border border-cyan-500/30 rounded-3xl p-3.5 shadow-xl space-y-2.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-white flex items-center gap-1.5">
+                              <span>📍 附近常吃推薦</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold">
+                                20m 精準感應 · Top 3
                               </span>
-                              <span className="text-xs font-black text-emerald-400">
-                                {fav.calories} kcal
-                              </span>
-                            </div>
-                            <h4 className="text-xs font-extrabold text-white truncate">
-                              {fav.foodName || fav.name}
-                            </h4>
-                            <p className="text-[11px] text-slate-400 mt-0.5">
-                              P {fav.protein}g · C {fav.carbs}g · F {fav.fat}g
-                            </p>
+                            </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
+                          <div className="flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => populateFormWithFood(fav, false)}
-                              className="flex-1 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition"
+                              onClick={() => refreshGpsLocation(false)}
+                              className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 border border-slate-700 transition active:scale-95"
                             >
-                              帶入微調
+                              {gpsStatus === 'locating' ? '定位中...' : '🔄 重新定位'}
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                quickAddFoodDirectly({
-                                  name: fav.foodName || fav.name,
-                                  portion: fav.portion || '1份',
-                                  calories: fav.calories,
-                                  protein: fav.protein,
-                                  carbs: fav.carbs,
-                                  fat: fav.fat
-                                })
-                              }
-                              className="flex-1 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black transition active:scale-95"
+                              onClick={handleSimulateNearby20m}
+                              title="模擬抵達常吃店家門口 20 公尺內，測試 Haversine 距離排序與 Top 3 推薦"
+                              className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-[11px] font-extrabold text-emerald-300 border border-emerald-500/30 transition active:scale-95"
                             >
-                              ＋紀錄
+                              🧪 模擬抵達店門口
+                            </button>
+                            {favorites.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setShowFavManager((v) => !v)}
+                                className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-amber-300 border border-slate-700 transition"
+                              >
+                                ⭐ 常吃庫 ({favorites.length})
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {nearbyFavorites.length > 0 ? (
+                          <div className="flex items-stretch gap-2.5 overflow-x-auto no-scrollbar py-1 scroll-smooth">
+                            {nearbyFavorites.map((fav, idx) => (
+                              <div
+                                key={fav.id}
+                                className="flex-shrink-0 w-64 bg-slate-950/95 border border-emerald-500/40 rounded-2xl p-3 flex flex-col justify-between gap-2 shadow-lg shadow-emerald-500/5"
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                      #{idx + 1} 距離 {fav.distanceMeters.toFixed(1)}m
+                                    </span>
+                                    <span className="text-xs font-black text-emerald-400">
+                                      {fav.calories} kcal
+                                    </span>
+                                  </div>
+                                  <h4 className="text-xs font-extrabold text-white truncate">
+                                    {fav.foodName || fav.name}
+                                  </h4>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">
+                                    P {fav.protein}g · C {fav.carbs}g · F {fav.fat}g
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
+                                  <button
+                                    type="button"
+                                    onClick={() => populateFormWithFood(fav, false)}
+                                    className="flex-1 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition"
+                                  >
+                                    帶入微調
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      quickAddFoodDirectly({
+                                        name: fav.foodName || fav.name,
+                                        portion: fav.portion || '1份',
+                                        calories: fav.calories,
+                                        protein: fav.protein,
+                                        carbs: fav.carbs,
+                                        fat: fav.fat
+                                      })
+                                    }
+                                    className="flex-1 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black transition active:scale-95"
+                                  >
+                                    ＋紀錄
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs">
+                            <div className="text-slate-400 leading-relaxed">
+                              {gpsStatus === 'denied' || gpsStatus === 'error' ? (
+                                <span>
+                                  ⚠️ 尚未開啟定位權限或無法取得座標（網站功能仍可正常使用）。可點擊「🧪 模擬抵達店門口」體驗 20m 智慧推薦！
+                                </span>
+                              ) : favorites.length === 0 ? (
+                                <span>
+                                  💡 在飲食明細點擊「<strong className="text-amber-300">⭐ 存為常吃</strong>」，系統會自動記憶店家 GPS 座標；下次抵達 20 公尺內即自動跳出零秒差推薦！
+                                </span>
+                              ) : (
+                                <span>
+                                  📡 目前座標 20 公尺內無常吃店家紀錄（已存 {favorites.length} 筆常吃餐點）。抵達店門口 20m 內將自動顯示最近前 3 筆！
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {showFavManager && favorites.length > 0 && (
+                          <div className="pt-2 border-t border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-amber-300">
+                                ⭐ 已儲存的我的最愛常吃菜單 (共 {favorites.length} 筆)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setShowFavManager(false)}
+                                className="text-slate-400 hover:text-white text-[11px]"
+                              >
+                                收合 ▲
+                              </button>
+                            </div>
+                            <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar pb-1">
+                              {favorites.map((fav) => {
+                                const dist =
+                                  currentCoords && typeof fav.lat === 'number'
+                                    ? calculateHaversineDistanceMeters(
+                                        currentCoords.lat,
+                                        currentCoords.lng,
+                                        fav.lat,
+                                        fav.lng
+                                      )
+                                    : null;
+                                return (
+                                  <div
+                                    key={fav.id}
+                                    className="flex-shrink-0 w-60 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between gap-1.5"
+                                  >
+                                    <div className="flex items-start justify-between gap-1">
+                                      <span className="text-xs font-extrabold text-white truncate">
+                                        {fav.foodName || fav.name}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteFavorite(fav.id)}
+                                        className="text-[10px] text-slate-500 hover:text-rose-400"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                      {fav.calories} kcal · P {fav.protein}g / C {fav.carbs}g / F {fav.fat}g
+                                    </div>
+                                    <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                                      <span className="text-[10px] text-cyan-400">
+                                        {typeof dist === 'number' && Number.isFinite(dist)
+                                          ? `距離 ${dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}`
+                                          : fav.lat
+                                          ? `已綁定座標`
+                                          : '無座標'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          quickAddFoodDirectly({
+                                            name: fav.foodName || fav.name,
+                                            portion: fav.portion || '1份',
+                                            calories: fav.calories,
+                                            protein: fav.protein,
+                                            carbs: fav.carbs,
+                                            fat: fav.fat
+                                          })
+                                        }
+                                        className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[10px] font-black"
+                                      >
+                                        ＋紀錄
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </section>
+                    </div>
+
+                    {/* 右側 (md:col-span-7)：今日攝取紀錄明細列表 */}
+                    <div className="md:col-span-7 space-y-4">
+                      <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-4 md:p-5 space-y-3.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <h2 className="text-base font-extrabold text-white">
+                              🍽️ {selectedDate} 攝取紀錄明細
+                            </h2>
+                            <p className="text-xs text-slate-400">
+                              共 {dailyItems.length} 筆餐點 · 總計 {Math.round(dailyTotals.calories)} kcal
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setActiveBottomTab('map')}
+                              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-cyan-300 border border-slate-700 transition active:scale-95"
+                            >
+                              🗺️ 地圖找店
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveBottomTab('add')}
+                              className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-extrabold text-slate-950 shadow-md transition active:scale-95"
+                            >
+                              📸 新增餐點
                             </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs">
-                      <div className="text-slate-400 leading-relaxed">
-                        {gpsStatus === 'denied' || gpsStatus === 'error' ? (
-                          <span>
-                            ⚠️ 尚未開啟定位權限或無法取得座標（網站功能仍可正常使用）。可點擊右側「🧪 模擬抵達店門口」體驗 20m 智慧推薦！
-                          </span>
-                        ) : favorites.length === 0 ? (
-                          <span>
-                            💡 在下方飲食明細點擊「<strong className="text-amber-300">⭐ 存為常吃</strong>」，系統會自動記憶店家 GPS 座標；下次抵達 20 公尺內即自動跳出零秒差推薦！
-                          </span>
+
+                        {dailyItems.length === 0 ? (
+                          <div className="py-12 text-center space-y-3 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
+                            <div className="text-3xl">🥩</div>
+                            <div className="space-y-1">
+                              <p className="text-sm font-bold text-slate-300">這天還沒有任何飲食紀錄</p>
+                              <p className="text-xs text-slate-500">
+                                點擊「📸 新增餐點」直接透過 AI 拍照、文字估算或手動輸入開始累積今日增肌營養！
+                              </p>
+                            </div>
+                            <div className="flex justify-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setActiveBottomTab('add')}
+                                className="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-500/20"
+                              >
+                                📸 前往紀錄餐點
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setActiveBottomTab('map')}
+                                className="px-4 py-2.5 rounded-xl bg-slate-800 text-cyan-300 border border-slate-700 text-xs font-extrabold"
+                              >
+                                🗺️ 地圖探索餐廳
+                              </button>
+                            </div>
+                          </div>
                         ) : (
-                          <span>
-                            📡 目前座標 20 公尺內無常吃店家紀錄（已存 {favorites.length} 筆常吃餐點）。抵達店門口 20m 內將自動顯示最近前 3 筆！
+                          <div className="space-y-2.5">
+                            {dailyItems.map((item) => {
+                              const mealMeta = MEAL_TYPES.find((m) => m.id === item.mealType) || MEAL_TYPES[1];
+                              return (
+                                <div
+                                  key={item.id}
+                                  className="bg-slate-950/90 border border-slate-800/90 rounded-2xl p-3.5 flex flex-col gap-2"
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-xs px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 font-bold">
+                                          {mealMeta.icon} {mealMeta.label}
+                                        </span>
+                                        {item.placeName && (
+                                          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
+                                            📍 {item.placeName}
+                                          </span>
+                                        )}
+                                        {item.aiRecognized && (
+                                          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                                            ✨ Gemini AI
+                                          </span>
+                                        )}
+                                        <span className="text-[11px] text-slate-500">{item.createdAt}</span>
+                                      </div>
+                                      <h3 className="text-sm font-extrabold text-white pt-0.5">{item.foodName}</h3>
+                                      <p className="text-xs text-slate-400">{item.portion}</p>
+                                    </div>
+
+                                    <div className="text-right flex flex-col items-end">
+                                      <div>
+                                        <span className="text-base font-black text-emerald-400">{item.calories}</span>
+                                        <span className="text-[11px] text-slate-400 ml-0.5">kcal</span>
+                                      </div>
+                                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap justify-end">
+                                        <button
+                                          type="button"
+                                          disabled={savingFavId === item.id}
+                                          onClick={() => handleSaveAsFavorite(item)}
+                                          title="儲存至我的最愛總表（⭐ 存為常吃）並於背景綁定地點/座標"
+                                          className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-[11px] text-amber-300 font-extrabold transition active:scale-95 disabled:opacity-50"
+                                        >
+                                          {savingFavId === item.id ? '定位儲存中...' : '⭐ 存為常吃'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleStartEditRecord(item)}
+                                          title="修改此筆餐點名稱、份量與營養素"
+                                          className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-[11px] text-cyan-300 font-extrabold transition active:scale-95"
+                                        >
+                                          ✏️ 修改
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteRecord(item.id)}
+                                          className="text-[11px] text-slate-500 hover:text-rose-400 font-semibold px-1"
+                                        >
+                                          刪除
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/70 text-xs font-bold">
+                                    <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                      <span className="text-slate-400">蛋白質</span>
+                                      <span className="text-cyan-400">{item.protein}g</span>
+                                    </div>
+                                    <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                      <span className="text-slate-400">碳水</span>
+                                      <span className="text-amber-400">{item.carbs}g</span>
+                                    </div>
+                                    <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                      <span className="text-slate-400">脂肪</span>
+                                      <span className="text-rose-400">{item.fat}g</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </section>
+                    </div>
+                  </div>
+                )}
+
+                {/* ==================== TAB 2: 📸 極簡化「新增紀錄」動線 ==================== */}
+                {activeBottomTab === 'add' && (
+                  <section ref={formRef} className="space-y-4">
+                    {/* 1. 輕量化地點綁定 (Background Binding) 毛玻璃藥丸標籤列 */}
+                    <div className="bg-slate-900/65 backdrop-blur-xl border border-white/15 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {selectedPlace.mode === 'place' ? (
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-xs font-extrabold text-emerald-200 max-w-full">
+                            <span className="truncate">📍 綁定：{selectedPlace.placeName}</span>
+                            <button
+                              type="button"
+                              onClick={handleClearSelectedPlace}
+                              className="px-1.5 py-0.5 rounded-full bg-slate-950/60 hover:bg-rose-500/40 text-[10px] text-rose-200 transition flex-shrink-0"
+                            >
+                              ✕ 清除
+                            </button>
+                          </div>
+                        ) : selectedPlace.mode === 'custom_gps' ? (
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-xs font-extrabold text-cyan-200 max-w-full">
+                            <span className="truncate">
+                              📡 綁定：
+                              {selectedPlace.placeName && selectedPlace.placeName !== '📍 自訂當前位置'
+                                ? selectedPlace.placeName
+                                : 'GPS 智慧座標'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleClearSelectedPlace}
+                              className="px-1.5 py-0.5 rounded-full bg-slate-950/60 hover:bg-rose-500/40 text-[10px] text-rose-200 transition flex-shrink-0"
+                            >
+                              ✕ 清除
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+                            🏠 無特定店家 (將自動使用 GPS)
                           </span>
                         )}
                       </div>
-                    </div>
-                  )}
 
-                  {showFavManager && favorites.length > 0 && (
-                    <div className="pt-2 border-t border-slate-800 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-amber-300">
-                          ⭐ 已儲存的我的最愛常吃菜單 (共 {favorites.length} 筆)
-                        </span>
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setShowFavManager(false)}
-                          className="text-slate-400 hover:text-white text-[11px]"
+                          onClick={() => {
+                            setSelectedPlace({
+                              mode: 'custom_gps',
+                              placeId: null,
+                              placeName: '',
+                              address: 'GPS 智慧座標',
+                              lat: currentCoords?.lat ?? null,
+                              lng: currentCoords?.lng ?? null
+                            });
+                            showToast('📡 已切換為 GPS 智慧座標綁定（自動比對 25m 內歷史餐點）');
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-[11px] font-bold text-cyan-300 border border-slate-700 transition active:scale-95"
                         >
-                          收合 ▲
+                          📡 綁定當前 GPS
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveBottomTab('map')}
+                          className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-[11px] font-extrabold text-cyan-200 border border-cyan-400/40 transition active:scale-95"
+                        >
+                          🗺️ 地圖選店 / 搜尋
                         </button>
                       </div>
-                      <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar pb-1">
-                        {favorites.map((fav) => {
-                          const dist =
-                            currentCoords && typeof fav.lat === 'number'
-                              ? calculateHaversineDistanceMeters(
-                                  currentCoords.lat,
-                                  currentCoords.lng,
-                                  fav.lat,
-                                  fav.lng
-                                )
-                              : null;
-                          return (
+                    </div>
+
+                    {/* 2. 📜 過去在此點過的餐點（SMART PLACE MEMORY）：僅在 selectedPlace.mode !== 'none' 且 placeHistoryItems.length > 0 時顯示 */}
+                    {selectedPlace.mode !== 'none' && placeHistoryItems.length > 0 && (
+                      <div className="bg-slate-900/95 border border-emerald-500/35 rounded-3xl p-4 space-y-3 shadow-xl">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                SMART PLACE MEMORY
+                              </span>
+                              <span className="text-[11px] font-extrabold text-emerald-400">
+                                共 {placeHistoryItems.length} 道歷史菜色
+                              </span>
+                            </div>
+                            <h3 className="text-sm font-black text-white mt-1">
+                              📜 過去在此點過的餐點（一鍵沿用免問 AI）
+                            </h3>
+                            <p className="text-[11px] text-slate-400">
+                              系統自動比對您曾在此地點（{selectedPlace.placeName || 'GPS 智慧座標'}）吃過的歷史紀錄與常吃菜單
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                          {placeHistoryItems.map((histItem) => (
                             <div
-                              key={fav.id}
-                              className="flex-shrink-0 w-60 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between gap-1.5"
+                              key={histItem.id}
+                              className="bg-slate-950/90 hover:border-emerald-400/60 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between gap-2.5 transition shadow-md"
                             >
-                              <div className="flex items-start justify-between gap-1">
-                                <span className="text-xs font-extrabold text-white truncate">
-                                  {fav.foodName || fav.name}
-                                </span>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <h4 className="text-xs font-extrabold text-white truncate">
+                                    {histItem.foodName}
+                                  </h4>
+                                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                                    {histItem.portion || '1份'} ·{' '}
+                                    <span className="text-emerald-400 font-black">
+                                      {histItem.calories} kcal
+                                    </span>
+                                  </p>
+                                </div>
+                                {histItem.dateKey && histItem.dateKey !== '常吃收藏' && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">
+                                    上次：{histItem.dateKey.slice(5)}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between text-[11px] font-bold bg-slate-900/90 px-2.5 py-1.5 rounded-xl">
+                                <span className="text-cyan-400">蛋白質 {histItem.protein}g</span>
+                                <span className="text-amber-400">碳水 {histItem.carbs}g</span>
+                                <span className="text-rose-400">脂肪 {histItem.fat}g</span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteFavorite(fav.id)}
-                                  className="text-[10px] text-slate-500 hover:text-rose-400"
+                                  onClick={() => {
+                                    populateFormWithFood(
+                                      {
+                                        name: histItem.foodName,
+                                        portion: histItem.portion,
+                                        calories: histItem.calories,
+                                        protein: histItem.protein,
+                                        carbs: histItem.carbs,
+                                        fat: histItem.fat,
+                                        placeId: selectedPlace.placeId || histItem.placeId || null,
+                                        placeName: selectedPlace.placeName || histItem.placeName || '',
+                                        lat: selectedPlace.lat ?? histItem.lat ?? null,
+                                        lng: selectedPlace.lng ?? histItem.lng ?? null
+                                      },
+                                      false
+                                    );
+                                    showToast(`📝 已將「${histItem.foodName}」帶入下方表單微調`);
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition active:scale-95"
                                 >
-                                  ✕
+                                  帶入微調
                                 </button>
-                              </div>
-                              <div className="text-[10px] text-slate-400">
-                                {fav.calories} kcal · P {fav.protein}g / C {fav.carbs}g / F {fav.fat}g
-                              </div>
-                              <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                                <span className="text-[10px] text-cyan-400">
-                                  {typeof dist === 'number' && Number.isFinite(dist)
-                                    ? `距離 ${dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}`
-                                    : fav.lat
-                                    ? `已綁定座標`
-                                    : '無座標'}
-                                </span>
                                 <button
                                   type="button"
                                   onClick={() =>
                                     quickAddFoodDirectly({
-                                      name: fav.foodName || fav.name,
-                                      portion: fav.portion || '1份',
-                                      calories: fav.calories,
-                                      protein: fav.protein,
-                                      carbs: fav.carbs,
-                                      fat: fav.fat
+                                      name: histItem.foodName,
+                                      portion: histItem.portion,
+                                      calories: histItem.calories,
+                                      protein: histItem.protein,
+                                      carbs: histItem.carbs,
+                                      fat: histItem.fat,
+                                      placeId: selectedPlace.placeId || histItem.placeId || null,
+                                      placeName: selectedPlace.placeName || histItem.placeName || '',
+                                      lat: selectedPlace.lat ?? histItem.lat ?? null,
+                                      lng: selectedPlace.lng ?? histItem.lng ?? null
                                     })
                                   }
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[10px] font-black"
+                                  className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-[11px] font-black transition active:scale-95 shadow-sm"
                                 >
-                                  ＋紀錄
+                                  ⚡ 一鍵沿用紀錄
                                 </button>
                               </div>
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </section>
+                    )}
 
-                <DashboardCard
-                  selectedDate={selectedDate}
-                  dailyTotals={dailyTotals}
-                  targets={targets}
-                  isTrainingDay={dailyMeta.isTrainingDay}
-                  onToggleTrainingDay={handleToggleTrainingDay}
-                  waterMl={dailyMeta.waterMl}
-                  onAddWater={handleAddWater}
-                  userWeight={Number(profile?.weight) || 70}
-                  onQuickAdd={quickAddFoodDirectly}
-                />
-
-                {/* 三分頁快速切換鈕：📊 儀表板、📸 紀錄、🗺️ 地圖探索 */}
-                <div className="grid grid-cols-3 gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
-                  <button
-                    onClick={() => setActiveBottomTab('dashboard')}
-                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1 ${
-                      activeBottomTab === 'dashboard'
-                        ? 'bg-emerald-500 text-slate-950 shadow-md'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <span>📊</span> 儀表板 ({dailyItems.length})
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveBottomTab('add');
-                      if (!editingLogId) {
-                        setAddStep(1);
-                      }
-                    }}
-                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1 ${
-                      activeBottomTab === 'add'
-                        ? 'bg-emerald-500 text-slate-950 shadow-md'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <span>📸</span> 紀錄
-                  </button>
-                  <button
-                    onClick={() => setActiveBottomTab('map')}
-                    className={`py-2.5 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1 ${
-                      activeBottomTab === 'map'
-                        ? 'bg-emerald-500 text-slate-950 shadow-md'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <span>🗺️</span> 地圖探索
-                  </button>
-                </div>
-
-                {/* 分頁內容：以地點為中心的全新兩階段紀錄動線 (Step 1: 選擇地點 -> Step 2: 歷史菜單與新增餐點) */}
-                {activeBottomTab === 'add' && (
-                  <section ref={formRef} className="space-y-4">
-                    {/* ⭐ 我的常吃餐點（我的最愛總表，獨立於地點系統，預設收合） */}
+                    {/* 3. ⭐ 我的常吃餐點（我的最愛總表，預設收合） */}
                     <div className="bg-slate-900/90 border border-amber-500/35 rounded-3xl p-4 space-y-2.5 shadow-lg">
                       <button
                         type="button"
@@ -2587,103 +3109,232 @@
                       )}
                     </div>
 
-                    {/* 兩階段步驟指示器 (Step 1: 選擇地點 <-> Step 2: 歷史菜單與新增餐點) */}
-                    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setAddStep(1)}
-                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 ${
-                          addStep === 1
-                            ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-md'
-                            : 'bg-slate-950/80 text-slate-400 hover:text-white border border-slate-800'
-                        }`}
-                      >
-                        <span>📍 Step 1</span>
-                        <span>選擇用餐地點</span>
-                      </button>
-                      <span className="text-slate-600 font-black">➔</span>
-                      <button
-                        type="button"
-                        onClick={() => setAddStep(2)}
-                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 ${
-                          addStep === 2
-                            ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-md'
-                            : 'bg-slate-950/80 text-slate-400 hover:text-white border border-slate-800'
-                        }`}
-                      >
-                        <span>🍽️ Step 2</span>
-                        <span>歷史菜單與新增餐點</span>
-                      </button>
-                    </div>
+                    {/* 4. AI 拍照估算 / 文字問 AI / 手動確認表單 (電腦版雙欄並排) */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                      {/* 左欄：AI 拍照與文字問 AI (md:col-span-5) */}
+                      <div className="md:col-span-5 space-y-4">
+                        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-500/30 rounded-3xl p-4 space-y-3.5 shadow-xl">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              GEMINI VISION AI
+                            </span>
+                            <h2 className="text-base font-extrabold text-white mt-1">
+                              📸 AI 拍照估算食物營養素
+                            </h2>
+                            <p className="text-xs text-slate-400">
+                              上傳或拍攝食物照片，由 Gemini 辨識份量、蛋白質、碳水、脂肪與總熱量，並自動填入表單確認
+                            </p>
+                          </div>
 
-                    {/* ==================== STEP 1: 選擇地點 (Location First) ==================== */}
-                    {addStep === 1 && (
-                      <LocationStep1Picker
-                        mapsKey={getSavedMapsKey()}
-                        mapsKeyVersion={mapsKeyVersion}
-                        currentCoords={currentCoords}
-                        onRefreshGps={() => refreshGpsLocation(false)}
-                        allHistoricalLogsFlat={allHistoricalLogsFlat}
-                        favorites={favorites}
-                        onSelectPlace={handleSelectPlaceInStep1}
-                        onOpenCloudModal={() => setShowCloudModal(true)}
-                        showToast={showToast}
-                      />
-                    )}
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <label className="min-h-[54px] rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 transition active:scale-95">
+                              <span>📷 拍照 / 選取照片</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handlePhotoUpload}
+                                className="hidden"
+                              />
+                            </label>
 
-                    {/* ==================== STEP 2: 歷史菜單與新增餐點 ==================== */}
-                    {addStep === 2 && (
-                      <div className="space-y-4">
-                        {/* Step 2 頂部：已選店名資訊卡 ＋ 餐別選擇（早/午/訓練前後/晚/點心） */}
-                        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/35 rounded-3xl p-4 space-y-3.5 shadow-xl">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                                  STEP 2 · 當前綁定地點
-                                </span>
-                                {selectedPlace.mode === 'place' && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                    🗺️ Google 店家已綁定
-                                  </span>
-                                )}
-                                {selectedPlace.mode === 'custom_gps' && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                    📡 GPS Haversine 座標綁定
-                                  </span>
-                                )}
-                              </div>
-                              <h2 className="text-base font-black text-white mt-1 flex items-center gap-1.5 truncate">
-                                <span>
-                                  {selectedPlace.mode === 'none'
-                                    ? '🏠'
-                                    : selectedPlace.mode === 'custom_gps'
-                                      ? '📍'
-                                      : '🏪'}
-                                </span>
-                                <span className="truncate">
-                                  {selectedPlace.placeName || '🏠 無特定店家 / 小零食 / 自行烹飪'}
-                                </span>
-                              </h2>
-                              {selectedPlace.address && (
-                                <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                                  {selectedPlace.address}
-                                </p>
+                            <label className="min-h-[54px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition active:scale-95">
+                              <span>🖼️ 從相簿上傳</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={aiUserHint}
+                              onChange={(e) => setAiUserHint(e.target.value)}
+                              placeholder="選填補充說明（例如：飯吃一半、雞腿去皮）"
+                              className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                            />
+                            {aiImagePayload && (
+                              <button
+                                type="button"
+                                disabled={aiLoading}
+                                onClick={() => triggerGeminiAnalysis()}
+                                className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs disabled:opacity-50"
+                              >
+                                重新辨識
+                              </button>
+                            )}
+                          </div>
+
+                          {aiPreviewUrl && (
+                            <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
+                              <img
+                                src={aiPreviewUrl}
+                                alt="Food preview"
+                                className="w-full h-44 object-cover"
+                              />
+                              {aiLoading && (
+                                <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+                                  <div className="w-9 h-9 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                                  <p className="text-xs font-bold text-emerald-300">
+                                    Gemini AI 正在分析食材份量與營養素...
+                                  </p>
+                                </div>
                               )}
                             </div>
+                          )}
 
+                          <div className="pt-1 border-t border-slate-800/80">
+                            <p className="text-[11px] text-slate-400 mb-2">
+                              💡 快速測試 AI 辨識結果自動帶入表單：
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {[
+                                {
+                                  foodName: '碳烤雞腿便當（含三樣配菜＋滷蛋）',
+                                  portion: '1盒 (約480g)',
+                                  calories: 760,
+                                  protein: 41,
+                                  carbs: 82,
+                                  fat: 28,
+                                  analysisNotes:
+                                    'AI 辨識：帶皮烤雞腿約160g、白飯一碗、高麗菜與青江菜、滷蛋一顆。蛋白質充足！'
+                                },
+                                {
+                                  foodName: '嫩煎鮭魚酪梨夏威夷拌飯 (Poke Bowl)',
+                                  portion: '1碗 (約430g)',
+                                  calories: 640,
+                                  protein: 36,
+                                  carbs: 64,
+                                  fat: 24,
+                                  analysisNotes:
+                                    'AI 辨識：生食級鮭魚丁140g、毛豆、酪梨片、紫米飯底，富含 Omega-3 與優質增肌營養。'
+                                },
+                                {
+                                  foodName: '板腱牛排 8oz 配烤馬鈴薯與花椰菜',
+                                  portion: '1份排餐 (約390g)',
+                                  calories: 610,
+                                  protein: 52,
+                                  carbs: 38,
+                                  fat: 26,
+                                  analysisNotes:
+                                    'AI 辨識：低脂板腱牛排約220g，高蛋白質且富含肌酸與鐵質，適合重訓後補充。'
+                                }
+                              ].map((demo, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => {
+                                    populateFormWithFood(demo, true);
+                                    showToast(`✨ AI 辨識結果已自動填入表單，請確認！`);
+                                  }}
+                                  className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-semibold transition"
+                                >
+                                  ✨ 測試：{demo.foodName.split('（')[0].split(' ')[0]}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 💬 文字快速問 AI (Text-to-AI) 區塊 */}
+                        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-4 space-y-3 shadow-xl">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                              TEXT-TO-AI 純文字估算
+                            </span>
+                            <h2 className="text-base font-extrabold text-white mt-1">
+                              💬 文字快速問 AI
+                            </h2>
+                            <p className="text-xs text-slate-400">
+                              忘記拍照時，直接輸入餐點描述（例如：「一碗蝦仁蛋炒飯」），由 Gemini 直接估算三大營養素與總熱量並帶入表單
+                            </p>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={aiTextQuery}
+                              onChange={(e) => setAiTextQuery(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  triggerTextToAiAnalysis();
+                                }
+                              }}
+                              placeholder="例如：一碗蝦仁蛋炒飯、大碗牛肉麵加滷蛋..."
+                              className="flex-1 min-h-[48px] bg-slate-950/90 border border-slate-800 rounded-2xl px-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                            />
                             <button
                               type="button"
-                              onClick={() => setAddStep(1)}
-                              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-extrabold whitespace-nowrap transition active:scale-95"
+                              disabled={aiTextLoading}
+                              onClick={() => triggerTextToAiAnalysis()}
+                              className="min-h-[48px] px-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-lg shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50"
                             >
-                              🔄 更換地點
+                              {aiTextLoading ? 'AI 估算中...' : '🤖 AI 估算'}
                             </button>
                           </div>
 
+                          <div className="flex items-center flex-wrap gap-1.5 pt-0.5">
+                            <span className="text-[11px] text-slate-400">熱門快選：</span>
+                            {[
+                              '一碗蝦仁蛋炒飯',
+                              '紅燒牛肉麵加滷蛋',
+                              '手工水餃 10顆',
+                              '滷肉飯大碗加燙青菜'
+                            ].map((sample) => (
+                              <button
+                                key={sample}
+                                type="button"
+                                onClick={() => {
+                                  setAiTextQuery(sample);
+                                  triggerTextToAiAnalysis(sample);
+                                }}
+                                className="text-[11px] px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-semibold transition"
+                              >
+                                💬 {sample}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 右欄：餐別選擇與手動確認表單 (md:col-span-7) */}
+                      <div className="md:col-span-7">
+                        <form
+                          onSubmit={handleAddRecordSubmit}
+                          className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 md:p-5 space-y-4 shadow-xl"
+                        >
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <h3 className="text-base font-extrabold text-white">
+                              {editingLogId
+                                ? '✏️ 修改餐點紀錄'
+                                : '📝 餐點營養素確認與手動紀錄'}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              {editingLogId && (
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEditRecord}
+                                  className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold transition"
+                                >
+                                  ✕ 取消修改
+                                </button>
+                              )}
+                              {formState.aiRecognized && (
+                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                                  ✨ AI 已自動帶入
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
                           {/* 餐別選擇（早/午/訓練前後/晚/點心） */}
-                          <div className="pt-2 border-t border-slate-800/80">
-                            <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5">
                               🍽️ 選擇餐別（早 / 午 / 訓練前後 / 晚 / 點心）
                             </label>
                             <div className="grid grid-cols-5 gap-1.5">
@@ -2704,686 +3355,193 @@
                               ))}
                             </div>
                           </div>
-                        </div>
 
-                        {/* 📜 過去在此點過的餐點（調用歷史紀錄或常吃清單，一鍵沿用不需再問 AI） */}
-                        {selectedPlace.mode !== 'none' && (
-                          <div className="bg-slate-900/95 border border-emerald-500/35 rounded-3xl p-4 space-y-3 shadow-xl">
-                            <div className="flex items-center justify-between gap-2">
-                              <div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                    SMART PLACE MEMORY
-                                  </span>
-                                  <span className="text-[11px] font-extrabold text-emerald-400">
-                                    共 {placeHistoryItems.length} 道歷史菜色
-                                  </span>
-                                </div>
-                                <h3 className="text-sm font-black text-white mt-1">
-                                  📜 過去在此點過的餐點（一鍵沿用免問 AI）
-                                </h3>
-                                <p className="text-[11px] text-slate-400">
-                                  系統自動比對您曾在此地點（{selectedPlace.placeName}）吃過的歷史紀錄與常吃菜單
-                                </p>
-                              </div>
+                          {formState.aiNotes && (
+                            <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 leading-relaxed">
+                              <strong>🤖 Gemini 營養分析：</strong> {formState.aiNotes}
                             </div>
+                          )}
 
-                            {placeHistoryItems.length === 0 ? (
-                              <div className="bg-slate-950/75 border border-dashed border-slate-800 rounded-2xl p-3.5 text-xs text-slate-400 leading-relaxed">
-                                💡 您過去還沒有在「<strong className="text-slate-200">{selectedPlace.placeName}</strong>」的用餐紀錄。請使用下方「<strong className="text-emerald-300">🆕 點了新菜色</strong>」進行 AI 拍照、文字估算或手動輸入，送出後就會自動記住這家店的專屬菜單！
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                {placeHistoryItems.map((histItem) => (
-                                  <div
-                                    key={histItem.id}
-                                    className="bg-slate-950/90 hover:border-emerald-400/60 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between gap-2.5 transition shadow-md"
-                                  >
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="min-w-0">
-                                        <h4 className="text-xs font-extrabold text-white truncate">
-                                          {histItem.foodName}
-                                        </h4>
-                                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                                          {histItem.portion || '1份'} ·{' '}
-                                          <span className="text-emerald-400 font-black">
-                                            {histItem.calories} kcal
-                                          </span>
-                                        </p>
-                                      </div>
-                                      {histItem.dateKey && histItem.dateKey !== '常吃收藏' && (
-                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">
-                                          上次：{histItem.dateKey.slice(5)}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center justify-between text-[11px] font-bold bg-slate-900/90 px-2.5 py-1.5 rounded-xl">
-                                      <span className="text-cyan-400">蛋白質 {histItem.protein}g</span>
-                                      <span className="text-amber-400">碳水 {histItem.carbs}g</span>
-                                      <span className="text-rose-400">脂肪 {histItem.fat}g</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setShowNewDishForm(true);
-                                          populateFormWithFood(
-                                            {
-                                              name: histItem.foodName,
-                                              portion: histItem.portion,
-                                              calories: histItem.calories,
-                                              protein: histItem.protein,
-                                              carbs: histItem.carbs,
-                                              fat: histItem.fat,
-                                              placeId:
-                                                selectedPlace.placeId || histItem.placeId || null,
-                                              placeName:
-                                                selectedPlace.placeName || histItem.placeName || '',
-                                              lat: selectedPlace.lat ?? histItem.lat ?? null,
-                                              lng: selectedPlace.lng ?? histItem.lng ?? null
-                                            },
-                                            false
-                                          );
-                                          showToast(`📝 已將「${histItem.foodName}」帶入下方表單微調`);
-                                        }}
-                                        className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition active:scale-95"
-                                      >
-                                        帶入微調
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          quickAddFoodDirectly({
-                                            name: histItem.foodName,
-                                            portion: histItem.portion,
-                                            calories: histItem.calories,
-                                            protein: histItem.protein,
-                                            carbs: histItem.carbs,
-                                            fat: histItem.fat,
-                                            placeId:
-                                              selectedPlace.placeId || histItem.placeId || null,
-                                            placeName:
-                                              selectedPlace.placeName || histItem.placeName || '',
-                                            lat: selectedPlace.lat ?? histItem.lat ?? null,
-                                            lng: selectedPlace.lng ?? histItem.lng ?? null
-                                          })
-                                        }
-                                        className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-[11px] font-black transition active:scale-95 shadow-sm"
-                                      >
-                                        ⚡ 一鍵沿用紀錄
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* 切換展開「🆕 點了新菜色」按鈕 */}
-                            <div className="pt-1">
-                              <button
-                                type="button"
-                                onClick={() => setShowNewDishForm((v) => !v)}
-                                className={`w-full min-h-[46px] rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition active:scale-98 border ${
-                                  showNewDishForm
-                                    ? 'bg-slate-800/90 text-emerald-300 border-emerald-500/40'
-                                    : 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 border-transparent shadow-lg shadow-emerald-500/20'
-                                }`}
-                              >
-                                <span>🆕 點了新菜色（展開 AI 拍照 / 文字問 AI / 手動輸入）</span>
-                                <span>{showNewDishForm ? '▲' : '▼'}</span>
-                              </button>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="sm:col-span-2">
+                              <label className="block text-xs font-bold text-slate-400 mb-1">
+                                食物品項名稱 *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={formState.foodName}
+                                onChange={(e) =>
+                                  setFormState((s) => ({ ...s, foodName: e.target.value }))
+                                }
+                                placeholder="例如：舒肥雞胸肉便當、鮪魚蛋餅"
+                                className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-slate-400 mb-1">
+                                估計份量
+                              </label>
+                              <input
+                                type="text"
+                                value={formState.portion}
+                                onChange={(e) =>
+                                  setFormState((s) => ({ ...s, portion: e.target.value }))
+                                }
+                                placeholder="例如：1份 / 200g"
+                                className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
+                              />
                             </div>
                           </div>
-                        )}
 
-                        {/* 🆕 點了新菜色：原本的 AI 拍照估算 + 文字問 AI + 手動確認表單 */}
-                        {(showNewDishForm || selectedPlace.mode === 'none' || editingLogId) && (
-                          <div className="space-y-4">
-                            <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-500/30 rounded-3xl p-4 space-y-3.5 shadow-xl">
-                              <div>
-                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                  GEMINI VISION AI
-                                </span>
-                                <h2 className="text-base font-extrabold text-white mt-1">
-                                  📸 AI 拍照估算食物營養素
-                                </h2>
-                                <p className="text-xs text-slate-400">
-                                  上傳或拍攝食物照片，由 Gemini 辨識份量、蛋白質、碳水、脂肪與總熱量，並自動填入下方表單確認
-                                </p>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-2.5">
-                                <label className="min-h-[54px] rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 transition active:scale-95">
-                                  <span>📷 拍照 / 選取照片</span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    onChange={handlePhotoUpload}
-                                    className="hidden"
-                                  />
-                                </label>
-
-                                <label className="min-h-[54px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition active:scale-95">
-                                  <span>🖼️ 從相簿上傳</span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoUpload}
-                                    className="hidden"
-                                  />
-                                </label>
-                              </div>
-
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={aiUserHint}
-                                  onChange={(e) => setAiUserHint(e.target.value)}
-                                  placeholder="選填補充說明（例如：飯吃一半、雞腿去皮）"
-                                  className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                                />
-                                {aiImagePayload && (
+                          {baseFormValues && (
+                            <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800">
+                              <span className="text-xs font-bold text-slate-400">
+                                快速調整份量倍率：
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {[0.5, 1, 1.5, 2].map((scale) => (
                                   <button
+                                    key={scale}
                                     type="button"
-                                    disabled={aiLoading}
-                                    onClick={() => triggerGeminiAnalysis()}
-                                    className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs disabled:opacity-50"
+                                    onClick={() => handleScaleChange(scale)}
+                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition ${
+                                      portionScale === scale
+                                        ? 'bg-emerald-500 text-slate-950'
+                                        : 'bg-slate-800 text-slate-300'
+                                    }`}
                                   >
-                                    重新辨識
+                                    {scale}x
                                   </button>
-                                )}
-                              </div>
-
-                              {aiPreviewUrl && (
-                                <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
-                                  <img
-                                    src={aiPreviewUrl}
-                                    alt="Food preview"
-                                    className="w-full h-44 object-cover"
-                                  />
-                                  {aiLoading && (
-                                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-                                      <div className="w-9 h-9 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                                      <p className="text-xs font-bold text-emerald-300">
-                                        Gemini AI 正在分析食材份量與營養素...
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              <div className="pt-1 border-t border-slate-800/80">
-                                <p className="text-[11px] text-slate-400 mb-2">
-                                  💡 快速測試 AI 辨識結果自動帶入表單：
-                                </p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {[
-                                    {
-                                      foodName: '碳烤雞腿便當（含三樣配菜＋滷蛋）',
-                                      portion: '1盒 (約480g)',
-                                      calories: 760,
-                                      protein: 41,
-                                      carbs: 82,
-                                      fat: 28,
-                                      analysisNotes:
-                                        'AI 辨識：帶皮烤雞腿約160g、白飯一碗、高麗菜與青江菜、滷蛋一顆。蛋白質充足！'
-                                    },
-                                    {
-                                      foodName: '嫩煎鮭魚酪梨夏威夷拌飯 (Poke Bowl)',
-                                      portion: '1碗 (約430g)',
-                                      calories: 640,
-                                      protein: 36,
-                                      carbs: 64,
-                                      fat: 24,
-                                      analysisNotes:
-                                        'AI 辨識：生食級鮭魚丁140g、毛豆、酪梨片、紫米飯底，富含 Omega-3 與優質增肌營養。'
-                                    },
-                                    {
-                                      foodName: '板腱牛排 8oz 配烤馬鈴薯與花椰菜',
-                                      portion: '1份排餐 (約390g)',
-                                      calories: 610,
-                                      protein: 52,
-                                      carbs: 38,
-                                      fat: 26,
-                                      analysisNotes:
-                                        'AI 辨識：低脂板腱牛排約220g，高蛋白質且富含肌酸與鐵質，適合重訓後補充。'
-                                    }
-                                  ].map((demo, idx) => (
-                                    <button
-                                      key={idx}
-                                      type="button"
-                                      onClick={() => {
-                                        populateFormWithFood(demo, true);
-                                        showToast(`✨ AI 辨識結果已自動填入下方表單，請確認！`);
-                                      }}
-                                      className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-semibold transition"
-                                    >
-                                      ✨ 測試：{demo.foodName.split('（')[0].split(' ')[0]}
-                                    </button>
-                                  ))}
-                                </div>
+                                ))}
                               </div>
                             </div>
+                          )}
 
-                            {/* 💬 文字快速問 AI (Text-to-AI) 區塊 */}
-                            <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-4 space-y-3 shadow-xl">
-                              <div>
-                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                                  TEXT-TO-AI 純文字估算
-                                </span>
-                                <h2 className="text-base font-extrabold text-white mt-1">
-                                  💬 文字快速問 AI
-                                </h2>
-                                <p className="text-xs text-slate-400">
-                                  忘記拍照時，直接輸入餐點描述（例如：「一碗蝦仁蛋炒飯」），由 Gemini 直接估算三大營養素與總熱量並帶入下方表單
-                                </p>
-                              </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <div className="bg-slate-950 p-3 rounded-2xl border border-cyan-500/30">
+                              <label className="block text-[11px] font-extrabold text-cyan-400 mb-1">
+                                蛋白質 (g)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                required
+                                value={formState.protein}
+                                onChange={(e) =>
+                                  setFormState((s) => ({ ...s, protein: e.target.value }))
+                                }
+                                placeholder="0"
+                                className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                              />
+                            </div>
 
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={aiTextQuery}
-                                  onChange={(e) => setAiTextQuery(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      triggerTextToAiAnalysis();
-                                    }
-                                  }}
-                                  placeholder="例如：一碗蝦仁蛋炒飯、大碗牛肉麵加滷蛋..."
-                                  className="flex-1 min-h-[48px] bg-slate-950/90 border border-slate-800 rounded-2xl px-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-                                />
+                            <div className="bg-slate-950 p-3 rounded-2xl border border-amber-500/30">
+                              <label className="block text-[11px] font-extrabold text-amber-400 mb-1">
+                                碳水化合物 (g)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                required
+                                value={formState.carbs}
+                                onChange={(e) =>
+                                  setFormState((s) => ({ ...s, carbs: e.target.value }))
+                                }
+                                placeholder="0"
+                                className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                              />
+                            </div>
+
+                            <div className="bg-slate-950 p-3 rounded-2xl border border-rose-500/30">
+                              <label className="block text-[11px] font-extrabold text-rose-400 mb-1">
+                                脂肪 (g)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                required
+                                value={formState.fat}
+                                onChange={(e) =>
+                                  setFormState((s) => ({ ...s, fat: e.target.value }))
+                                }
+                                placeholder="0"
+                                className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                              />
+                            </div>
+
+                            <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-500/30">
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[11px] font-extrabold text-emerald-400">
+                                  總熱量 (kcal)
+                                </label>
                                 <button
                                   type="button"
-                                  disabled={aiTextLoading}
-                                  onClick={() => triggerTextToAiAnalysis()}
-                                  className="min-h-[48px] px-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-lg shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50"
+                                  onClick={() => {
+                                    const p = Number(formState.protein) || 0;
+                                    const c = Number(formState.carbs) || 0;
+                                    const f = Number(formState.fat) || 0;
+                                    setFormState((s) => ({
+                                      ...s,
+                                      calories: String(Math.round(p * 4 + c * 4 + f * 9))
+                                    }));
+                                  }}
+                                  className="text-[10px] text-emerald-300 underline"
                                 >
-                                  {aiTextLoading ? 'AI 估算中...' : '🤖 AI 估算'}
+                                  自動算
                                 </button>
                               </div>
-
-                              <div className="flex items-center flex-wrap gap-1.5 pt-0.5">
-                                <span className="text-[11px] text-slate-400">熱門快選：</span>
-                                {[
-                                  '一碗蝦仁蛋炒飯',
-                                  '紅燒牛肉麵加滷蛋',
-                                  '手工水餃 10顆',
-                                  '滷肉飯大碗加燙青菜'
-                                ].map((sample) => (
-                                  <button
-                                    key={sample}
-                                    type="button"
-                                    onClick={() => {
-                                      setAiTextQuery(sample);
-                                      triggerTextToAiAnalysis(sample);
-                                    }}
-                                    className="text-[11px] px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-semibold transition"
-                                  >
-                                    💬 {sample}
-                                  </button>
-                                ))}
-                              </div>
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                required
+                                value={formState.calories}
+                                onChange={(e) =>
+                                  setFormState((s) => ({ ...s, calories: e.target.value }))
+                                }
+                                placeholder="自動計算"
+                                className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
+                              />
                             </div>
-
-                            {/* 手動紀錄與 AI 最終確認表單 */}
-                            <form
-                              onSubmit={handleAddRecordSubmit}
-                              className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 space-y-4"
-                            >
-                              <div className="flex items-center justify-between flex-wrap gap-2">
-                                <h3 className="text-base font-extrabold text-white">
-                                  {editingLogId
-                                    ? '✏️ 修改餐點紀錄'
-                                    : '📝 餐點營養素確認與手動紀錄'}
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                  {selectedPlace.mode !== 'none' && selectedPlace.placeName && (
-                                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
-                                      📍 {selectedPlace.placeName}
-                                    </span>
-                                  )}
-                                  {editingLogId && (
-                                    <button
-                                      type="button"
-                                      onClick={handleCancelEditRecord}
-                                      className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold transition"
-                                    >
-                                      ✕ 取消修改
-                                    </button>
-                                  )}
-                                  {formState.aiRecognized && (
-                                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
-                                      ✨ AI 已自動帶入
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {formState.aiNotes && (
-                                <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 leading-relaxed">
-                                  <strong>🤖 Gemini 營養分析：</strong> {formState.aiNotes}
-                                </div>
-                              )}
-
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div className="sm:col-span-2">
-                                  <label className="block text-xs font-bold text-slate-400 mb-1">
-                                    食物品項名稱 *
-                                  </label>
-                                  <input
-                                    type="text"
-                                    required
-                                    value={formState.foodName}
-                                    onChange={(e) =>
-                                      setFormState((s) => ({ ...s, foodName: e.target.value }))
-                                    }
-                                    placeholder="例如：舒肥雞胸肉便當、鮪魚蛋餅"
-                                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-bold text-slate-400 mb-1">
-                                    估計份量
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={formState.portion}
-                                    onChange={(e) =>
-                                      setFormState((s) => ({ ...s, portion: e.target.value }))
-                                    }
-                                    placeholder="例如：1份 / 200g"
-                                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
-                                  />
-                                </div>
-                              </div>
-
-                              {baseFormValues && (
-                                <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800">
-                                  <span className="text-xs font-bold text-slate-400">
-                                    快速調整份量倍率：
-                                  </span>
-                                  <div className="flex items-center gap-1.5">
-                                    {[0.5, 1, 1.5, 2].map((scale) => (
-                                      <button
-                                        key={scale}
-                                        type="button"
-                                        onClick={() => handleScaleChange(scale)}
-                                        className={`px-3 py-1 rounded-lg text-xs font-extrabold transition ${
-                                          portionScale === scale
-                                            ? 'bg-emerald-500 text-slate-950'
-                                            : 'bg-slate-800 text-slate-300'
-                                        }`}
-                                      >
-                                        {scale}x
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                <div className="bg-slate-950 p-3 rounded-2xl border border-cyan-500/30">
-                                  <label className="block text-[11px] font-extrabold text-cyan-400 mb-1">
-                                    蛋白質 (g)
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    required
-                                    value={formState.protein}
-                                    onChange={(e) =>
-                                      setFormState((s) => ({ ...s, protein: e.target.value }))
-                                    }
-                                    placeholder="0"
-                                    className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
-                                  />
-                                </div>
-
-                                <div className="bg-slate-950 p-3 rounded-2xl border border-amber-500/30">
-                                  <label className="block text-[11px] font-extrabold text-amber-400 mb-1">
-                                    碳水化合物 (g)
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    required
-                                    value={formState.carbs}
-                                    onChange={(e) =>
-                                      setFormState((s) => ({ ...s, carbs: e.target.value }))
-                                    }
-                                    placeholder="0"
-                                    className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
-                                  />
-                                </div>
-
-                                <div className="bg-slate-950 p-3 rounded-2xl border border-rose-500/30">
-                                  <label className="block text-[11px] font-extrabold text-rose-400 mb-1">
-                                    脂肪 (g)
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    required
-                                    value={formState.fat}
-                                    onChange={(e) =>
-                                      setFormState((s) => ({ ...s, fat: e.target.value }))
-                                    }
-                                    placeholder="0"
-                                    className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
-                                  />
-                                </div>
-
-                                <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-500/30">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <label className="block text-[11px] font-extrabold text-emerald-400">
-                                      總熱量 (kcal)
-                                    </label>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const p = Number(formState.protein) || 0;
-                                        const c = Number(formState.carbs) || 0;
-                                        const f = Number(formState.fat) || 0;
-                                        setFormState((s) => ({
-                                          ...s,
-                                          calories: String(Math.round(p * 4 + c * 4 + f * 9))
-                                        }));
-                                      }}
-                                      className="text-[10px] text-emerald-300 underline"
-                                    >
-                                      自動算
-                                    </button>
-                                  </div>
-                                  <input
-                                    type="number"
-                                    step="1"
-                                    min="0"
-                                    required
-                                    value={formState.calories}
-                                    onChange={(e) =>
-                                      setFormState((s) => ({ ...s, calories: e.target.value }))
-                                    }
-                                    placeholder="自動計算"
-                                    className="w-full bg-transparent text-lg font-black text-white focus:outline-none"
-                                  />
-                                </div>
-                              </div>
-
-                              <button
-                                type="submit"
-                                className="w-full min-h-[54px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 transition active:scale-95"
-                              >
-                                {editingLogId
-                                  ? `💾 儲存修改並同步至 ${selectedDate}`
-                                  : `✅ 確認並加入 ${selectedDate} 飲食紀錄${
-                                      selectedPlace.mode !== 'none' && selectedPlace.placeName
-                                        ? `（綁定：${selectedPlace.placeName}）`
-                                        : ''
-                                    }`}
-                              </button>
-                            </form>
                           </div>
-                        )}
+
+                          <button
+                            type="submit"
+                            className="w-full min-h-[54px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 transition active:scale-95"
+                          >
+                            {editingLogId
+                              ? `💾 儲存修改並同步至 ${selectedDate}`
+                              : `✅ 確認並加入 ${selectedDate} 飲食紀錄${
+                                  selectedPlace.mode !== 'none' && selectedPlace.placeName
+                                    ? `（📍${selectedPlace.placeName}）`
+                                    : ''
+                                }`}
+                          </button>
+                        </form>
                       </div>
-                    )}
+                    </div>
                   </section>
                 )}
 
-                {/* 當日飲食紀錄明細 */}
-                {activeBottomTab === 'dashboard' && (
-                  <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-4 space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-base font-extrabold text-white">
-                          🍽️ {selectedDate} 攝取紀錄明細
-                        </h2>
-                        <p className="text-xs text-slate-400">
-                          共 {dailyItems.length} 筆餐點 · 總計 {Math.round(dailyTotals.calories)} kcal
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => {
-                            setActiveBottomTab('add');
-                            setAddStep(1);
-                          }}
-                          className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-extrabold text-slate-950 shadow-md"
-                        >
-                          📸 新增餐點 (地點/AI)
-                        </button>
-                      </div>
-                    </div>
-
-                    {dailyItems.length === 0 ? (
-                      <div className="py-10 text-center space-y-3 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
-                        <div className="text-3xl">🥩</div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-bold text-slate-300">這天還沒有任何飲食紀錄</p>
-                          <p className="text-xs text-slate-500">
-                            使用「地點歷史菜單一鍵沿用」或「AI 拍照估算」開始累積今日增肌營養！
-                          </p>
-                        </div>
-                        <div className="flex justify-center gap-2 pt-1">
-                          <button
-                            onClick={() => {
-                              setActiveBottomTab('add');
-                              setAddStep(1);
-                            }}
-                            className="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-500/20"
-                          >
-                            📸 前往紀錄 (選擇地點/AI)
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5">
-                        {dailyItems.map((item) => {
-                          const mealMeta = MEAL_TYPES.find((m) => m.id === item.mealType) || MEAL_TYPES[1];
-                          return (
-                            <div
-                              key={item.id}
-                              className="bg-slate-950/90 border border-slate-800/90 rounded-2xl p-3.5 flex flex-col gap-2"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-xs px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 font-bold">
-                                      {mealMeta.icon} {mealMeta.label}
-                                    </span>
-                                    {item.placeName && (
-                                      <span className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
-                                        📍 {item.placeName}
-                                      </span>
-                                    )}
-                                    {item.aiRecognized && (
-                                      <span className="text-[10px] px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                                        ✨ Gemini AI
-                                      </span>
-                                    )}
-                                    <span className="text-[11px] text-slate-500">{item.createdAt}</span>
-                                  </div>
-                                  <h3 className="text-sm font-extrabold text-white pt-0.5">{item.foodName}</h3>
-                                  <p className="text-xs text-slate-400">{item.portion}</p>
-                                </div>
-
-                                <div className="text-right flex flex-col items-end">
-                                  <div>
-                                    <span className="text-base font-black text-emerald-400">{item.calories}</span>
-                                    <span className="text-[11px] text-slate-400 ml-0.5">kcal</span>
-                                  </div>
-                                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap justify-end">
-                                    <button
-                                      type="button"
-                                      disabled={savingFavId === item.id}
-                                      onClick={() => handleSaveAsFavorite(item)}
-                                      title="儲存至我的最愛總表（⭐ 存為常吃）並於背景綁定地點/座標"
-                                      className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-[11px] text-amber-300 font-extrabold transition active:scale-95 disabled:opacity-50"
-                                    >
-                                      {savingFavId === item.id ? '定位儲存中...' : '⭐ 存為常吃'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleStartEditRecord(item)}
-                                      title="修改此筆餐點名稱、份量與營養素"
-                                      className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-[11px] text-cyan-300 font-extrabold transition active:scale-95"
-                                    >
-                                      ✏️ 修改
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteRecord(item.id)}
-                                      className="text-[11px] text-slate-500 hover:text-rose-400 font-semibold px-1"
-                                    >
-                                      刪除
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/70 text-xs font-bold">
-                                <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
-                                  <span className="text-slate-400">蛋白質</span>
-                                  <span className="text-cyan-400">{item.protein}g</span>
-                                </div>
-                                <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
-                                  <span className="text-slate-400">碳水</span>
-                                  <span className="text-amber-400">{item.carbs}g</span>
-                                </div>
-                                <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
-                                  <span className="text-slate-400">脂肪</span>
-                                  <span className="text-rose-400">{item.fat}g</span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </section>
+                {/* ==================== TAB 3: 🗺️ 地圖探索與搜尋大一統 ==================== */}
+                {activeBottomTab === 'map' && (
+                  <FullScreenMapExplore
+                    currentCoords={currentCoords}
+                    gpsStatus={gpsStatus}
+                    onRefreshGps={() => refreshGpsLocation(false)}
+                    onOpenCloudConfig={() => setShowCloudModal(true)}
+                    onPickPlaceForLog={(placeObj) => handleSelectPlaceInStep1(placeObj)}
+                    showToast={showToast}
+                  />
                 )}
               </main>
 
-              {/* 全螢幕地圖探索與隨機餐廳視圖（佔滿扣除導覽列的剩餘空間，搭配淺色地圖與 Apple 液態毛玻璃 UI） */}
-              {activeBottomTab === 'map' && (
-                <FullScreenMapExplore
-                  currentCoords={currentCoords}
-                  gpsStatus={gpsStatus}
-                  onRefreshGps={() => refreshGpsLocation(false)}
-                  onOpenCloudConfig={() => setShowCloudModal(true)}
-                  onPickPlaceForLog={(placeObj) => handleSelectPlaceInStep1(placeObj)}
-                  showToast={showToast}
-                />
-              )}
-
-              {/* 手機底部大按鈕導覽列（3 個全懸浮毛玻璃按鈕：📊 儀表板、📸 紀錄、🗺️ 地圖探索） */}
-              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-transparent border-none pointer-events-none px-3 py-2">
+              {/* 手機底部大按鈕導覽列（md:hidden 僅在手機版顯示，3 個全懸浮毛玻璃按鈕） */}
+              <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-transparent border-none pointer-events-none px-3 py-2">
                 <div className="max-w-lg mx-auto grid grid-cols-3 gap-2 pointer-events-auto">
                   <button
                     onClick={() => setActiveBottomTab('dashboard')}
@@ -3398,12 +3556,7 @@
                   </button>
 
                   <button
-                    onClick={() => {
-                      setActiveBottomTab('add');
-                      if (!editingLogId) {
-                        setAddStep(1);
-                      }
-                    }}
+                    onClick={() => setActiveBottomTab('add')}
                     className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 backdrop-blur-xl shadow-2xl ${
                       activeBottomTab === 'add'
                         ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 border border-white/40'
@@ -5268,6 +5421,8 @@
       const [mapsReady, setMapsReady] = useState(false);
       const [mapsError, setMapsError] = useState('');
       const [searchingRandom, setSearchingRandom] = useState(false);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [searchingKeyword, setSearchingKeyword] = useState(false);
       const [selectedRestaurant, setSelectedRestaurant] = useState(null);
       const [foundPoolCount, setFoundPoolCount] = useState(0);
       const [shownPlaceIds, setShownPlaceIds] = useState([]);
@@ -5594,9 +5749,142 @@
         }
       };
 
+      // 🔍 關鍵字搜尋特定餐廳或品項 (結果直接轉為地圖上的圖釘 Marker，點擊圖釘彈出底部餐廳卡片)
+      const handleKeywordSearch = async (e) => {
+        if (e) e.preventDefault();
+        const q = searchQuery.trim();
+        if (!q) return;
+
+        setSearchingKeyword(true);
+        try {
+          let coords = currentCoords;
+          if (!coords && typeof onRefreshGps === 'function') {
+            coords = await onRefreshGps();
+          }
+          const centerLat = Number(coords?.lat) || 25.033964;
+          const centerLng = Number(coords?.lng) || 121.564468;
+
+          if (mapsReady && window.google?.maps) {
+            const gmaps = window.google.maps;
+            const { Place } = await gmaps.importLibrary('places');
+
+            const res = await Place.searchByText({
+              textQuery: q,
+              fields: [
+                'id',
+                'displayName',
+                'formattedAddress',
+                'location',
+                'rating',
+                'regularOpeningHours',
+                'businessStatus'
+              ],
+              locationBias: {
+                center: { lat: centerLat, lng: centerLng },
+                radius: 2500
+              },
+              maxResultCount: 15,
+              language: 'zh-TW'
+            });
+
+            const places = res?.places || [];
+            const results = [];
+            for (const p of places) {
+              if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') continue;
+              let isOpenResult;
+              try {
+                isOpenResult = await p.isOpen();
+              } catch (errOpen) {
+                isOpenResult = undefined;
+              }
+              const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
+              if (!parsed) continue;
+              results.push({
+                ...parsed,
+                openNow: isOpenResult !== false
+              });
+            }
+
+            if (results.length === 0) {
+              showToast?.(`找不到與「${q}」相關的營業店家`, 'error');
+              setSearchingKeyword(false);
+              return;
+            }
+
+            setFoundPoolCount(results.length);
+            const firstMatch = results[0];
+
+            // 清除舊圖釘並將所有搜尋結果標記於地圖上
+            placeMarkersRef.current.forEach((m) => m.setMap(null));
+            placeMarkersRef.current = [];
+
+            if (mapRef.current) {
+              results.forEach((item, idx) => {
+                const isPrimary = idx === 0;
+                const marker = new gmaps.Marker({
+                  position: { lat: item.lat, lng: item.lng },
+                  map: mapRef.current,
+                  title: item.placeName,
+                  zIndex: isPrimary ? 1000 : 200,
+                  animation: isPrimary ? gmaps.Animation.DROP : null,
+                  icon: isPrimary
+                    ? {
+                        path: gmaps.SymbolPath.CIRCLE,
+                        scale: 12,
+                        fillColor: '#10b981',
+                        fillOpacity: 1,
+                        strokeColor: '#0f172a',
+                        strokeWeight: 3
+                      }
+                    : {
+                        path: gmaps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: '#06b6d4',
+                        fillOpacity: 0.9,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 2
+                      }
+                });
+                marker.addListener('click', () => {
+                  setSelectedRestaurant(item);
+                  mapRef.current?.panTo({ lat: item.lat, lng: item.lng });
+                });
+                placeMarkersRef.current.push(marker);
+              });
+
+              mapRef.current.panTo({ lat: firstMatch.lat, lng: firstMatch.lng });
+              mapRef.current.setZoom(16);
+            }
+
+            setSelectedRestaurant(firstMatch);
+            showToast?.(`🔍 找到 ${results.length} 間「${q}」相關店家，點擊地圖圖釘可切換！`);
+          } else {
+            // 若尚未設定 Google Maps 金鑰，允許直接將輸入的店名產生卡片並帶入紀錄
+            const customStore = {
+              placeId: `custom_store_${q}`,
+              placeName: q,
+              address: '自訂搜尋店家 (設定 Maps 金鑰可檢視真實地圖位置)',
+              lat: centerLat,
+              lng: centerLng,
+              distanceM: 0,
+              rating: null,
+              openNow: true
+            };
+            setFoundPoolCount(1);
+            setSelectedRestaurant(customStore);
+            showToast?.(`🔍 已選取「${q}」，可點擊下方按鈕帶入紀錄！`);
+          }
+        } catch (err) {
+          console.error('Keyword map search error:', err);
+          showToast?.(`搜尋失敗：${err.message || '請確認 Places API (New) 權限'}`, 'error');
+        } finally {
+          setSearchingKeyword(false);
+        }
+      };
+
       return (
-        <div className="fixed inset-0 z-30 flex flex-col bg-slate-100 overflow-hidden select-none">
-          {/* 全螢幕明亮淺色 Google Map 底圖 (徹底佔滿全螢幕，避免手機瀏覽器 dvh 計算問題) */}
+        <div className="fixed inset-0 z-30 md:relative md:inset-auto md:z-auto flex-1 flex flex-col bg-slate-100 md:rounded-3xl overflow-hidden min-h-[75vh] md:border md:border-slate-800/80 md:shadow-2xl select-none">
+          {/* 全螢幕明亮淺色 Google Map 底圖 (徹底佔滿容器，避免手機瀏覽器 dvh 計算問題，電腦版則優雅適配右側主畫面) */}
           <div className="absolute inset-0 w-full h-full">
             {savedMapsKey && !mapsError ? (
               <div ref={mapContainerRef} className="w-full h-full bg-slate-100" />
@@ -5621,7 +5909,7 @@
                   </div>
                   <p className="text-xs text-slate-200 leading-relaxed">
                     輸入您的 Google Maps API Key（需啟用 <strong>Maps JavaScript API</strong> 與{' '}
-                    <strong>Places API (New)</strong>），即可開啟明亮淺色全螢幕地圖，並使用上方毛玻璃「🎲 隨機找有開的店」功能！
+                    <strong>Places API (New)</strong>），即可開啟明亮淺色地圖，並使用上方毛玻璃「🔍 搜尋店名」與「🎲 隨機找有開的店」功能！
                   </p>
                   <div className="flex items-center gap-2 pt-1">
                     <button
@@ -5636,64 +5924,98 @@
               </div>
             )}
 
-            {/* 頂部懸浮區：Apple 液態毛玻璃「🎲 不知道吃啥？隨機找有開的店」按鈕與定位狀態 */}
-            <div className="absolute top-3 left-3 right-3 z-20 pointer-events-none">
-              <div className="max-w-lg mx-auto flex flex-col gap-2 pointer-events-auto">
-                {/* 頂部狀態與定位列 (Apple Frosted Glass) */}
-                <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-white/20 shadow-2xl text-white">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-                    <span className="text-xs font-extrabold truncate">
-                      {currentCoords
-                        ? `📍 已鎖定目前位置 (±${currentCoords.accuracy || 15}m)`
-                        : gpsStatus === 'locating'
-                        ? '📡 正在取得 GPS 座標...'
-                        : '📍 預設商圈中心 (點擊右側重新定位)'}
-                    </span>
+            {/* 頂部懸浮區：RWD 電腦版排在左上與右上，手機版垂直堆疊 */}
+            <div className="absolute top-3 left-3 right-3 md:top-4 md:left-4 md:right-4 z-20 pointer-events-none">
+              <div className="w-full flex flex-col md:flex-row md:items-start md:justify-between gap-2.5">
+                {/* 左側群組：定位狀態列 + 關鍵字搜尋框 */}
+                <div className="w-full md:w-[420px] flex flex-col gap-2 pointer-events-auto">
+                  {/* 頂部狀態與定位列 (Apple Frosted Glass) */}
+                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/65 backdrop-blur-xl border border-white/20 shadow-2xl text-white">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                      <span className="text-xs font-extrabold truncate">
+                        {currentCoords
+                          ? `📍 已鎖定目前位置 (±${currentCoords.accuracy || 15}m)`
+                          : gpsStatus === 'locating'
+                          ? '📡 正在取得 GPS 座標...'
+                          : '📍 預設商圈中心 (點擊右側重新定位)'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={onRefreshGps}
+                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-white transition active:scale-95"
+                      >
+                        🔄 定位
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onOpenCloudConfig}
+                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-cyan-200 transition active:scale-95"
+                      >
+                        🔑 金鑰
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+
+                  {/* 整合搜尋框：搜尋特定餐廳或食物，結果直接轉為地圖圖釘 */}
+                  <form
+                    onSubmit={handleKeywordSearch}
+                    className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-900/65 backdrop-blur-xl border border-white/20 shadow-2xl"
+                  >
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="🔍 搜尋餐廳或美食（例：Subway、八方雲集、雞胸肉）"
+                      className="flex-1 min-w-0 bg-transparent px-2.5 py-1.5 text-xs font-bold text-white placeholder-slate-300/75 focus:outline-none"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 text-[11px] flex items-center justify-center flex-shrink-0"
+                        title="清除搜尋文字"
+                      >
+                        ✕
+                      </button>
+                    )}
                     <button
-                      type="button"
-                      onClick={onRefreshGps}
-                      className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-white transition active:scale-95"
+                      type="submit"
+                      disabled={searchingKeyword || !searchQuery.trim()}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-md transition active:scale-95 disabled:opacity-50"
                     >
-                      🔄 定位
+                      {searchingKeyword ? '搜尋中...' : '搜尋'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={onOpenCloudConfig}
-                      className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-cyan-200 transition active:scale-95"
-                    >
-                      🔑 金鑰
-                    </button>
-                  </div>
+                  </form>
                 </div>
 
-                {/* 醒目懸浮毛玻璃按鈕：「🎲 不知道吃啥？隨機找有開的店」 */}
+                {/* 右側群組：醒目懸浮毛玻璃按鈕「🎲 不知道吃啥？隨機找有開的店」 */}
                 <button
                   type="button"
                   disabled={searchingRandom}
                   onClick={handleRandomOpenRestaurant}
-                  className="w-full py-3.5 px-4 rounded-3xl bg-slate-900/65 hover:bg-slate-900/80 active:scale-[0.98] backdrop-blur-xl border border-white/25 shadow-2xl flex items-center justify-center gap-2.5 text-white transition group cursor-pointer disabled:opacity-60"
+                  className="w-full md:w-auto py-3.5 px-5 rounded-3xl bg-slate-900/65 hover:bg-slate-900/80 active:scale-[0.98] backdrop-blur-xl border border-white/25 shadow-2xl flex items-center justify-center gap-2.5 text-white transition group cursor-pointer disabled:opacity-60 pointer-events-auto"
                 >
                   <span className={`text-xl ${searchingRandom ? 'animate-spin' : 'group-hover:rotate-12 transition-transform'}`}>
                     🎲
                   </span>
                   <span className="text-sm font-black tracking-wide bg-gradient-to-r from-white via-emerald-200 to-cyan-200 bg-clip-text text-transparent">
                     {searchingRandom
-                      ? '正在搜尋 1km 內營業中餐廳...'
+                      ? '正在搜尋附近營業中餐廳...'
                       : '不知道吃啥？隨機找有開的店'}
                   </span>
                   <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
-                    1km · 營業中
+                    營業中
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* 底部懸浮區：Apple 液態毛玻璃餐廳資訊卡 (顯示店名、距離、評分與「⚡ 帶入紀錄」按鈕，浮動於底部導覽列之上) */}
+            {/* 底部懸浮區：Apple 液態毛玻璃餐廳資訊卡 (手機版 bottom-24 避開導覽列，電腦版 md:bottom-6 置底) */}
             {selectedRestaurant && (
-              <div className="absolute bottom-24 left-3 right-3 z-20 pointer-events-none">
+              <div className="absolute bottom-24 md:bottom-6 left-3 right-3 z-20 pointer-events-none">
                 <div className="max-w-lg mx-auto bg-slate-900/65 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-4 text-white pointer-events-auto transition-all">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -5774,7 +6096,7 @@
                       className="col-span-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-1.5 transition active:scale-95"
                     >
                       <span>⚡ 帶入紀錄</span>
-                      <span className="text-[11px] font-extrabold">(直達 Step 2)</span>
+                      <span className="text-[11px] font-extrabold">(自動綁定店家)</span>
                     </button>
                   </div>
                 </div>
