@@ -2463,7 +2463,7 @@
                 {/* ==================== TAB 1: 📊 儀表板 (Dashboard 雙欄設計) ==================== */}
                 {activeBottomTab === 'dashboard' && (
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
-                    {/* 左側 (md:col-span-5)：熱量與營養素圓環卡片、喝水進度、智慧達標補給建議、20m 附近常吃推薦 */}
+                    {/* 左側 (md:col-span-5)：熱量與營養素圓環卡片、喝水進度、智慧達標補給建議 */}
                     <div className="md:col-span-5 space-y-4">
                       <DashboardCard
                         selectedDate={selectedDate}
@@ -2476,196 +2476,6 @@
                         userWeight={Number(profile?.weight) || 70}
                         onQuickAdd={quickAddFoodDirectly}
                       />
-
-                      {/* 📍 附近常吃推薦 (GPS 20m Haversine 精準防擾，由近到遠最多顯示前 3 筆) */}
-                      <section className="bg-gradient-to-r from-slate-900 via-[#0E172A] to-slate-900 border border-cyan-500/30 rounded-3xl p-3.5 shadow-xl space-y-2.5">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-white flex items-center gap-1.5">
-                              <span>📍 附近常吃推薦</span>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold">
-                                20m 精準感應 · Top 3
-                              </span>
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => refreshGpsLocation(false)}
-                              className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 border border-slate-700 transition active:scale-95"
-                            >
-                              {gpsStatus === 'locating' ? '定位中...' : '🔄 重新定位'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleSimulateNearby20m}
-                              title="模擬抵達常吃店家門口 20 公尺內，測試 Haversine 距離排序與 Top 3 推薦"
-                              className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-[11px] font-extrabold text-emerald-300 border border-emerald-500/30 transition active:scale-95"
-                            >
-                              🧪 模擬抵達店門口
-                            </button>
-                            {favorites.length > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => setShowFavManager((v) => !v)}
-                                className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-amber-300 border border-slate-700 transition"
-                              >
-                                ⭐ 常吃庫 ({favorites.length})
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {nearbyFavorites.length > 0 ? (
-                          <div className="flex items-stretch gap-2.5 overflow-x-auto no-scrollbar py-1 scroll-smooth">
-                            {nearbyFavorites.map((fav, idx) => (
-                              <div
-                                key={fav.id}
-                                className="flex-shrink-0 w-64 bg-slate-950/95 border border-emerald-500/40 rounded-2xl p-3 flex flex-col justify-between gap-2 shadow-lg shadow-emerald-500/5"
-                              >
-                                <div>
-                                  <div className="flex items-center justify-between gap-1 mb-1">
-                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                      #{idx + 1} 距離 {fav.distanceMeters.toFixed(1)}m
-                                    </span>
-                                    <span className="text-xs font-black text-emerald-400">
-                                      {fav.calories} kcal
-                                    </span>
-                                  </div>
-                                  <h4 className="text-xs font-extrabold text-white truncate">
-                                    {fav.foodName || fav.name}
-                                  </h4>
-                                  <p className="text-[11px] text-slate-400 mt-0.5">
-                                    P {fav.protein}g · C {fav.carbs}g · F {fav.fat}g
-                                  </p>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
-                                  <button
-                                    type="button"
-                                    onClick={() => populateFormWithFood(fav, false)}
-                                    className="flex-1 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition"
-                                  >
-                                    帶入微調
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      quickAddFoodDirectly({
-                                        name: fav.foodName || fav.name,
-                                        portion: fav.portion || '1份',
-                                        calories: fav.calories,
-                                        protein: fav.protein,
-                                        carbs: fav.carbs,
-                                        fat: fav.fat
-                                      })
-                                    }
-                                    className="flex-1 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black transition active:scale-95"
-                                  >
-                                    ＋紀錄
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs">
-                            <div className="text-slate-400 leading-relaxed">
-                              {gpsStatus === 'denied' || gpsStatus === 'error' ? (
-                                <span>
-                                  ⚠️ 尚未開啟定位權限或無法取得座標（網站功能仍可正常使用）。可點擊「🧪 模擬抵達店門口」體驗 20m 智慧推薦！
-                                </span>
-                              ) : favorites.length === 0 ? (
-                                <span>
-                                  💡 在飲食明細點擊「<strong className="text-amber-300">⭐ 存為常吃</strong>」，系統會自動記憶店家 GPS 座標；下次抵達 20 公尺內即自動跳出零秒差推薦！
-                                </span>
-                              ) : (
-                                <span>
-                                  📡 目前座標 20 公尺內無常吃店家紀錄（已存 {favorites.length} 筆常吃餐點）。抵達店門口 20m 內將自動顯示最近前 3 筆！
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {showFavManager && favorites.length > 0 && (
-                          <div className="pt-2 border-t border-slate-800 space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-bold text-amber-300">
-                                ⭐ 已儲存的我的最愛常吃菜單 (共 {favorites.length} 筆)
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setShowFavManager(false)}
-                                className="text-slate-400 hover:text-white text-[11px]"
-                              >
-                                收合 ▲
-                              </button>
-                            </div>
-                            <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar pb-1">
-                              {favorites.map((fav) => {
-                                const dist =
-                                  currentCoords && typeof fav.lat === 'number'
-                                    ? calculateHaversineDistanceMeters(
-                                        currentCoords.lat,
-                                        currentCoords.lng,
-                                        fav.lat,
-                                        fav.lng
-                                      )
-                                    : null;
-                                return (
-                                  <div
-                                    key={fav.id}
-                                    className="flex-shrink-0 w-60 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between gap-1.5"
-                                  >
-                                    <div className="flex items-start justify-between gap-1">
-                                      <span className="text-xs font-extrabold text-white truncate">
-                                        {fav.foodName || fav.name}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteFavorite(fav.id)}
-                                        className="text-[10px] text-slate-500 hover:text-rose-400"
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                    <div className="text-[10px] text-slate-400">
-                                      {fav.calories} kcal · P {fav.protein}g / C {fav.carbs}g / F {fav.fat}g
-                                    </div>
-                                    <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                                      <span className="text-[10px] text-cyan-400">
-                                        {typeof dist === 'number' && Number.isFinite(dist)
-                                          ? `距離 ${dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}`
-                                          : fav.lat
-                                          ? `已綁定座標`
-                                          : '無座標'}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          quickAddFoodDirectly({
-                                            name: fav.foodName || fav.name,
-                                            portion: fav.portion || '1份',
-                                            calories: fav.calories,
-                                            protein: fav.protein,
-                                            carbs: fav.carbs,
-                                            fat: fav.fat
-                                          })
-                                        }
-                                        className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[10px] font-black"
-                                      >
-                                        ＋紀錄
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </section>
                     </div>
 
                     {/* 右側 (md:col-span-7)：今日攝取紀錄明細列表 */}
@@ -2880,6 +2690,196 @@
                         </button>
                       </div>
                     </div>
+
+                    {/* 📍 附近常吃推薦 (GPS 20m Haversine 精準防擾，由近到遠最多顯示前 3 筆) */}
+                    <section className="bg-gradient-to-r from-slate-900 via-[#0E172A] to-slate-900 border border-cyan-500/30 rounded-3xl p-3.5 shadow-xl space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-white flex items-center gap-1.5">
+                            <span>📍 附近常吃推薦</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold">
+                              20m 精準感應 · Top 3
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => refreshGpsLocation(false)}
+                            className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 border border-slate-700 transition active:scale-95"
+                          >
+                            {gpsStatus === 'locating' ? '定位中...' : '🔄 重新定位'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSimulateNearby20m}
+                            title="模擬抵達常吃店家門口 20 公尺內，測試 Haversine 距離排序與 Top 3 推薦"
+                            className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-[11px] font-extrabold text-emerald-300 border border-emerald-500/30 transition active:scale-95"
+                          >
+                            🧪 模擬抵達店門口
+                          </button>
+                          {favorites.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowFavManager((v) => !v)}
+                              className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-amber-300 border border-slate-700 transition"
+                            >
+                              ⭐ 常吃庫 ({favorites.length})
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {nearbyFavorites.length > 0 ? (
+                        <div className="flex items-stretch gap-2.5 overflow-x-auto no-scrollbar py-1 scroll-smooth">
+                          {nearbyFavorites.map((fav, idx) => (
+                            <div
+                              key={fav.id}
+                              className="flex-shrink-0 w-64 bg-slate-950/95 border border-emerald-500/40 rounded-2xl p-3 flex flex-col justify-between gap-2 shadow-lg shadow-emerald-500/5"
+                            >
+                              <div>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    #{idx + 1} 距離 {fav.distanceMeters.toFixed(1)}m
+                                  </span>
+                                  <span className="text-xs font-black text-emerald-400">
+                                    {fav.calories} kcal
+                                  </span>
+                                </div>
+                                <h4 className="text-xs font-extrabold text-white truncate">
+                                  {fav.foodName || fav.name}
+                                </h4>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                  P {fav.protein}g · C {fav.carbs}g · F {fav.fat}g
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
+                                <button
+                                  type="button"
+                                  onClick={() => populateFormWithFood(fav, false)}
+                                  className="flex-1 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition"
+                                >
+                                  帶入微調
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    quickAddFoodDirectly({
+                                      name: fav.foodName || fav.name,
+                                      portion: fav.portion || '1份',
+                                      calories: fav.calories,
+                                      protein: fav.protein,
+                                      carbs: fav.carbs,
+                                      fat: fav.fat
+                                    })
+                                  }
+                                  className="flex-1 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black transition active:scale-95"
+                                >
+                                  ＋紀錄
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs">
+                          <div className="text-slate-400 leading-relaxed">
+                            {gpsStatus === 'denied' || gpsStatus === 'error' ? (
+                              <span>
+                                ⚠️ 尚未開啟定位權限或無法取得座標（網站功能仍可正常使用）。可點擊「🧪 模擬抵達店門口」體驗 20m 智慧推薦！
+                              </span>
+                            ) : favorites.length === 0 ? (
+                              <span>
+                                💡 在飲食明細點擊「<strong className="text-amber-300">⭐ 存為常吃</strong>」，系統會自動記憶店家 GPS 座標；下次抵達 20 公尺內即自動跳出零秒差推薦！
+                              </span>
+                            ) : (
+                              <span>
+                                📡 目前座標 20 公尺內無常吃店家紀錄（已存 {favorites.length} 筆常吃餐點）。抵達店門口 20m 內將自動顯示最近前 3 筆！
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {showFavManager && favorites.length > 0 && (
+                        <div className="pt-2 border-t border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-amber-300">
+                              ⭐ 已儲存的我的最愛常吃菜單 (共 {favorites.length} 筆)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowFavManager(false)}
+                              className="text-slate-400 hover:text-white text-[11px]"
+                            >
+                              收合 ▲
+                            </button>
+                          </div>
+                          <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar pb-1">
+                            {favorites.map((fav) => {
+                              const dist =
+                                currentCoords && typeof fav.lat === 'number'
+                                  ? calculateHaversineDistanceMeters(
+                                      currentCoords.lat,
+                                      currentCoords.lng,
+                                      fav.lat,
+                                      fav.lng
+                                    )
+                                  : null;
+                              return (
+                                <div
+                                  key={fav.id}
+                                  className="flex-shrink-0 w-60 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between gap-1.5"
+                                >
+                                  <div className="flex items-start justify-between gap-1">
+                                    <span className="text-xs font-extrabold text-white truncate">
+                                      {fav.foodName || fav.name}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteFavorite(fav.id)}
+                                      className="text-[10px] text-slate-500 hover:text-rose-400"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400">
+                                    {fav.calories} kcal · P {fav.protein}g / C {fav.carbs}g / F {fav.fat}g
+                                  </div>
+                                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                                    <span className="text-[10px] text-cyan-400">
+                                      {typeof dist === 'number' && Number.isFinite(dist)
+                                        ? `距離 ${dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}`
+                                        : fav.lat
+                                        ? `已綁定座標`
+                                        : '無座標'}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        quickAddFoodDirectly({
+                                          name: fav.foodName || fav.name,
+                                          portion: fav.portion || '1份',
+                                          calories: fav.calories,
+                                          protein: fav.protein,
+                                          carbs: fav.carbs,
+                                          fat: fav.fat
+                                        })
+                                      }
+                                      className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[10px] font-black"
+                                    >
+                                      ＋紀錄
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </section>
 
                     {/* 2. 📜 過去在此點過的餐點（SMART PLACE MEMORY）：僅在 selectedPlace.mode !== 'none' 且 placeHistoryItems.length > 0 時顯示 */}
                     {selectedPlace.mode !== 'none' && placeHistoryItems.length > 0 && (
@@ -5423,7 +5423,7 @@
       const [searchingRandom, setSearchingRandom] = useState(false);
       const [searchQuery, setSearchQuery] = useState('');
       const [searchingKeyword, setSearchingKeyword] = useState(false);
-      const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+      const [searchResults, setSearchResults] = useState([]);
       const [foundPoolCount, setFoundPoolCount] = useState(0);
       const [shownPlaceIds, setShownPlaceIds] = useState([]);
 
@@ -5508,17 +5508,14 @@
                 }
 
                 const isOpen = place.businessStatus === 'OPERATIONAL' && isOpenResult !== false;
-                setSelectedRestaurant({
-                  ...parsed,
-                  openNow: isOpen
-                });
+                setSearchResults([{ ...parsed, openNow: isOpen }]);
                 mapRef.current.panTo({ lat: parsed.lat, lng: parsed.lng });
               }
             } catch (e) {
               console.warn('Map POI click fetchFields error:', e);
             }
           });
-        } else if (currentCoords && !selectedRestaurant) {
+        } else if (currentCoords && searchResults.length === 0) {
           mapRef.current.panTo(center);
         }
 
@@ -5690,7 +5687,7 @@
                       }
                 });
                 marker.addListener('click', () => {
-                  setSelectedRestaurant(item);
+                  setSearchResults([item]);
                   mapRef.current?.panTo({ lat: item.lat, lng: item.lng });
                 });
                 placeMarkersRef.current.push(marker);
@@ -5700,7 +5697,7 @@
               mapRef.current.setZoom(17);
             }
 
-            setSelectedRestaurant(chosen);
+            setSearchResults([chosen]);
             showToast?.(`🎲 為您隨機抽中：${chosen.placeName}！`);
           } else {
             // 尚未設定 Maps API Key 時的內建示範隨機池，確保功能隨時可體驗
@@ -5738,7 +5735,7 @@
             ];
             const chosen = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
             setFoundPoolCount(fallbackPool.length);
-            setSelectedRestaurant(chosen);
+            setSearchResults([chosen]);
             showToast?.(`🎲 隨機推薦：${chosen.placeName}（設定 Maps 金鑰即可搜尋真實周邊餐廳）`);
           }
         } catch (err) {
@@ -5749,7 +5746,7 @@
         }
       };
 
-      // 🔍 關鍵字搜尋特定餐廳或品項 (結果直接轉為地圖上的圖釘 Marker，點擊圖釘彈出底部餐廳卡片)
+      // 🔍 關鍵字搜尋特定餐廳或品項 (結果轉為地圖圖釘與底部橫向滑動餐廳列表)
       const handleKeywordSearch = async (e) => {
         if (e) e.preventDefault();
         const q = searchQuery.trim();
@@ -5846,7 +5843,7 @@
                       }
                 });
                 marker.addListener('click', () => {
-                  setSelectedRestaurant(item);
+                  setSearchResults([item]);
                   mapRef.current?.panTo({ lat: item.lat, lng: item.lng });
                 });
                 placeMarkersRef.current.push(marker);
@@ -5856,8 +5853,8 @@
               mapRef.current.setZoom(16);
             }
 
-            setSelectedRestaurant(firstMatch);
-            showToast?.(`🔍 找到 ${results.length} 間「${q}」相關店家，點擊地圖圖釘可切換！`);
+            setSearchResults(results);
+            showToast?.(`🔍 找到 ${results.length} 間「${q}」相關店家，可左右滑動底部卡片切換！`);
           } else {
             // 若尚未設定 Google Maps 金鑰，允許直接將輸入的店名產生卡片並帶入紀錄
             const customStore = {
@@ -5871,7 +5868,7 @@
               openNow: true
             };
             setFoundPoolCount(1);
-            setSelectedRestaurant(customStore);
+            setSearchResults([customStore]);
             showToast?.(`🔍 已選取「${q}」，可點擊下方按鈕帶入紀錄！`);
           }
         } catch (err) {
@@ -6013,92 +6010,72 @@
               </div>
             </div>
 
-            {/* 底部懸浮區：Apple 液態毛玻璃餐廳資訊卡 (手機版 bottom-24 避開導覽列，電腦版 md:bottom-6 置底) */}
-            {selectedRestaurant && (
-              <div className="absolute bottom-24 md:bottom-6 left-3 right-3 z-20 pointer-events-none">
-                <div className="max-w-lg mx-auto bg-slate-900/65 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-4 text-white pointer-events-auto transition-all">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                        {selectedRestaurant.openNow ? (
-                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
-                            🟢 現在營業中
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/40">
-                            🔴 已打烊 / 無營業
-                          </span>
-                        )}
-                        {selectedRestaurant.distanceM != null && (
-                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-cyan-500/25 text-cyan-200 border border-cyan-400/40">
-                            📍 距離 {selectedRestaurant.distanceM}m
-                          </span>
-                        )}
-                        {selectedRestaurant.rating ? (
-                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-200 border border-amber-400/40">
-                            ★ {selectedRestaurant.rating}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/15">
-                            尚無評分
-                          </span>
-                        )}
-                        {foundPoolCount > 0 && (
-                          <span className="text-[10px] text-slate-300 font-bold">
-                            (周邊 {foundPoolCount} 間候選)
-                          </span>
+            {/* 底部懸浮區：Apple 液態毛玻璃橫向滑動餐廳列表 (支援 overflow-x-auto 與 snap-x) */}
+            {searchResults.length > 0 && (
+              <div className="absolute bottom-24 md:bottom-6 left-0 right-0 z-20 pointer-events-none w-full">
+                <div className="flex gap-4 overflow-x-auto px-4 pb-4 no-scrollbar pointer-events-auto snap-x snap-mandatory">
+                  {searchResults.map((restaurant, idx) => (
+                    <div
+                      key={restaurant.placeId || idx}
+                      onClick={() => mapRef.current?.panTo({ lat: restaurant.lat, lng: restaurant.lng })}
+                      className="snap-center flex-shrink-0 w-[88%] md:w-[400px] bg-slate-900/75 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl p-4 text-white transition-all cursor-pointer hover:bg-slate-900/85"
+                    >
+                      {/* 卡片上半部：狀態、距離、評分與關閉按鈕 */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                            {restaurant.openNow ? (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">🟢 營業中</span>
+                            ) : (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/40">🔴 已打烊</span>
+                            )}
+                            {restaurant.distanceM != null && (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">📍 {restaurant.distanceM}m</span>
+                            )}
+                            {restaurant.rating && (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-400/30">★ {restaurant.rating}</span>
+                            )}
+                          </div>
+                          <h3 className="text-base font-black text-white truncate">🏪 {restaurant.placeName}</h3>
+                          {restaurant.address && <p className="text-[11px] text-slate-300 truncate mt-0.5">{restaurant.address}</p>}
+                        </div>
+                        {/* 只有在第一張卡片顯示關閉(清空)按鈕 */}
+                        {idx === 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSearchResults([]);
+                            }}
+                            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-xs text-slate-200 flex-shrink-0 transition"
+                          >
+                            ✕
+                          </button>
                         )}
                       </div>
 
-                      <h3 className="text-base font-black text-white truncate">
-                        🏪 {selectedRestaurant.placeName}
-                      </h3>
-                      {selectedRestaurant.address && (
-                        <p className="text-xs text-slate-300 truncate mt-0.5">
-                          {selectedRestaurant.address}
-                        </p>
-                      )}
+                      {/* 卡片下半部：操作按鈕 */}
+                      <div className="grid grid-cols-1 mt-3.5 pt-3 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPickPlaceForLog({
+                              mode: 'place',
+                              placeId: restaurant.placeId,
+                              placeName: restaurant.placeName,
+                              address: restaurant.address || '',
+                              lat: restaurant.lat,
+                              lng: restaurant.lng
+                            });
+                          }}
+                          className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-1.5 transition active:scale-95"
+                        >
+                          <span>⚡ 帶入紀錄</span>
+                        </button>
+                      </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRestaurant(null)}
-                      title="關閉卡片"
-                      className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-xs text-slate-200 flex-shrink-0 transition"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-white/15">
-                    <button
-                      type="button"
-                      disabled={searchingRandom}
-                      onClick={handleRandomOpenRestaurant}
-                      className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-extrabold text-white flex items-center justify-center gap-1.5 transition active:scale-95"
-                    >
-                      <span>🎲</span>
-                      <span>換一間</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onPickPlaceForLog({
-                          mode: 'place',
-                          placeId: selectedRestaurant.placeId,
-                          placeName: selectedRestaurant.placeName,
-                          address: selectedRestaurant.address || '',
-                          lat: selectedRestaurant.lat ?? currentCoords?.lat ?? null,
-                          lng: selectedRestaurant.lng ?? currentCoords?.lng ?? null
-                        })
-                      }
-                      className="col-span-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-1.5 transition active:scale-95"
-                    >
-                      <span>⚡ 帶入紀錄</span>
-                      <span className="text-[11px] font-extrabold">(自動綁定店家)</span>
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
