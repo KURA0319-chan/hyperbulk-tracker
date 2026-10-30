@@ -2,7 +2,11 @@
 <html lang="zh-TW" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="HyperBulk" />
   <title>HYPERBULK 增肌營養追蹤器 | AI 視覺辨識 × 雲端同步</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -29,6 +33,8 @@
       background-color: #070B12;
       color: #F1F5F9;
       -webkit-tap-highlight-color: transparent;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
     .no-scrollbar::-webkit-scrollbar {
       display: none;
@@ -2093,7 +2099,7 @@
           ) : (
             <div className="w-full max-w-[1440px] mx-auto min-h-screen flex flex-col md:flex-row relative">
               {/* 電腦版左側邊欄 (Desktop Sidebar) */}
-              <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 border-r border-slate-800/80 bg-[#070B12]/90 backdrop-blur-xl p-5 z-40 justify-between">
+              <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 border-r border-white/5 bg-[#070B12]/70 backdrop-blur-2xl backdrop-saturate-[1.5] p-5 z-40 justify-between shadow-2xl">
                 {/* 側邊欄頂部：PRO LOGO、標題與使用者資訊 */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -2110,12 +2116,12 @@
                     </div>
                   </div>
 
-                  <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 space-y-1">
+                  <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-2xl p-3 space-y-1">
                     <div className="flex items-center justify-between gap-1">
                       <span className="text-xs font-extrabold text-white truncate">
                         👤 {user.displayName}
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-white/10 font-bold">
                         {dailyMeta.isTrainingDay ? '💪 訓練日' : '🛌 休息日'}
                       </span>
                     </div>
@@ -2135,17 +2141,17 @@
                   <button
                     type="button"
                     onClick={() => setActiveBottomTab('dashboard')}
-                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition cursor-pointer ${
+                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition-all active:scale-[0.97] cursor-pointer ${
                       activeBottomTab === 'dashboard'
-                        ? 'bg-gradient-to-r from-emerald-500/25 to-cyan-500/15 text-emerald-300 border border-emerald-400/50 shadow-lg shadow-emerald-500/10'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                        ? 'bg-white/10 text-emerald-300 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                     }`}
                   >
                     <span className="flex items-center gap-2.5">
                       <span className="text-lg">📊</span>
                       <span>儀表板</span>
                     </span>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-slate-300">
                       {dailyItems.length} 筆
                     </span>
                   </button>
@@ -2153,10 +2159,10 @@
                   <button
                     type="button"
                     onClick={() => setActiveBottomTab('add')}
-                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition cursor-pointer ${
+                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition-all active:scale-[0.97] cursor-pointer ${
                       activeBottomTab === 'add'
                         ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                     }`}
                   >
                     <span className="flex items-center gap-2.5">
@@ -2179,31 +2185,31 @@
                   <button
                     type="button"
                     onClick={() => setActiveBottomTab('map')}
-                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition cursor-pointer ${
+                    className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between font-extrabold text-sm transition-all active:scale-[0.97] cursor-pointer ${
                       activeBottomTab === 'map'
-                        ? 'bg-gradient-to-r from-cyan-500/25 to-emerald-500/15 text-cyan-300 border border-cyan-400/50 shadow-lg shadow-cyan-500/10'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                        ? 'bg-white/10 text-cyan-300 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                     }`}
                   >
                     <span className="flex items-center gap-2.5">
                       <span className="text-lg">🗺️</span>
                       <span>地圖探索</span>
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-white/10">
                       🎲 盲盒
                     </span>
                   </button>
                 </div>
 
                 {/* 側邊欄底部：🔑 API 設定、⚙️ 目標設定與登出按鈕 */}
-                <div className="space-y-2 pt-4 border-t border-slate-800/80">
+                <div className="space-y-2 pt-4 border-t border-white/5">
                   <button
                     type="button"
                     onClick={() => setShowCloudModal(true)}
-                    className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-extrabold border transition flex items-center justify-between cursor-pointer active:scale-95 ${
+                    className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-extrabold border transition-all active:scale-[0.97] flex items-center justify-between cursor-pointer ${
                       getSavedGeminiKey()
-                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
-                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                        ? 'bg-emerald-500/15 text-emerald-300 border-white/10 hover:bg-emerald-500/25'
+                        : 'bg-amber-500/15 text-amber-300 border-white/10 hover:bg-amber-500/25'
                     }`}
                   >
                     <span>🔑 API / 雲端設定</span>
@@ -2214,7 +2220,7 @@
                     <button
                       type="button"
                       onClick={() => setShowOnboarding(true)}
-                      className="py-2.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-slate-700 transition active:scale-95"
+                      className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-emerald-400 border border-white/5 transition-all active:scale-[0.97]"
                     >
                       ⚙️ 目標設定
                     </button>
@@ -2227,7 +2233,7 @@
                         setUser(null);
                         setProfile(null);
                       }}
-                      className="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-bold transition"
+                      className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-white/5 text-xs font-bold transition-all active:scale-[0.97]"
                     >
                       登出
                     </button>
@@ -2236,7 +2242,7 @@
               </aside>
 
               {/* 手機版頂部導覽與橫向滑動日曆 (md:hidden 僅在手機版顯示) */}
-              <header className="md:hidden sticky top-0 z-30 bg-[#070B12]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 pt-3 pb-2.5">
+              <header className="md:hidden sticky top-0 z-30 bg-[#070B12]/70 backdrop-blur-2xl backdrop-saturate-[1.5] border-b border-white/5 px-4 pt-3 pb-2.5">
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20">
@@ -2250,10 +2256,10 @@
                         <button
                           type="button"
                           onClick={() => setShowCloudModal(true)}
-                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition cursor-pointer active:scale-95 ${
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition-all active:scale-[0.97] cursor-pointer ${
                             getSavedGeminiKey()
-                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
-                              : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                              ? 'bg-emerald-500/15 text-emerald-300 border-white/10 hover:bg-emerald-500/25'
+                              : 'bg-amber-500/15 text-amber-300 border-white/10 hover:bg-amber-500/25'
                           }`}
                         >
                           🔑 API / 雲端設定
@@ -2268,7 +2274,7 @@
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => setShowOnboarding(true)}
-                      className="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-slate-700 transition active:scale-95"
+                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-emerald-400 border border-white/5 transition-all active:scale-[0.97]"
                     >
                       ⚙️ 目標設定
                     </button>
@@ -2280,7 +2286,7 @@
                         setUser(null);
                         setProfile(null);
                       }}
-                      className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-bold transition"
+                      className="p-2 rounded-xl bg-white/5 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-white/5 text-xs font-bold transition-all active:scale-[0.97]"
                     >
                       登出
                     </button>
@@ -2292,10 +2298,10 @@
                     <button
                       type="button"
                       onClick={() => setSelectedDate(formatDateKey(new Date()))}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-[0.97] ${
                         selectedDate === formatDateKey(new Date())
                           ? 'bg-emerald-500 text-slate-950'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          : 'bg-white/5 text-slate-300 hover:bg-white/10'
                       }`}
                     >
                       今天
@@ -2308,7 +2314,7 @@
                         setSelectedDate(formatDateKey(d));
                       }}
                       title="前一天"
-                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                      className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold text-slate-300 transition-all active:scale-[0.97]"
                     >
                       ◀
                     </button>
@@ -2321,7 +2327,7 @@
                         setSelectedDate(formatDateKey(d));
                       }}
                       title="後一天"
-                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                      className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold text-slate-300 transition-all active:scale-[0.97]"
                     >
                       ▶
                     </button>
@@ -2330,7 +2336,7 @@
                   <button
                     type="button"
                     onClick={() => setShowCalendarModal(true)}
-                    className="flex items-center gap-1.5 text-xs font-extrabold text-cyan-300 bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 px-3 py-1.5 rounded-xl cursor-pointer shadow-sm transition active:scale-95"
+                    className="flex items-center gap-1.5 text-xs font-extrabold text-cyan-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl cursor-pointer shadow-sm transition-all active:scale-[0.97]"
                   >
                     <span>📅 選擇日期</span>
                   </button>
@@ -2344,12 +2350,12 @@
                       <button
                         key={d.dateStr}
                         onClick={() => setSelectedDate(d.dateStr)}
-                        className={`flex-shrink-0 min-w-[50px] py-2 px-2.5 rounded-2xl border flex flex-col items-center justify-center transition-all active:scale-95 ${
+                        className={`flex-shrink-0 min-w-[50px] py-2 px-2.5 rounded-2xl border flex flex-col items-center justify-center transition-all active:scale-[0.97] ${
                           isSelected
                             ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 border-emerald-300 shadow-lg shadow-emerald-500/25 font-black'
                             : d.isToday
-                            ? 'bg-slate-800/90 text-emerald-300 border-emerald-500/40'
-                            : 'bg-slate-900/70 text-slate-400 border-slate-800/80 hover:border-slate-700'
+                            ? 'bg-white/10 text-emerald-300 border-white/15'
+                            : 'bg-white/5 text-slate-400 border-white/5 hover:border-white/15'
                         }`}
                       >
                         <span className={`text-[10px] font-bold ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
@@ -2375,16 +2381,16 @@
               <main className="flex-1 md:ml-64 px-4 md:px-8 pt-4 pb-28 md:pb-8 flex flex-col min-h-screen overflow-x-hidden space-y-5">
                 {/* 電腦版頂部日期與橫向日曆列 (僅在電腦版且非地圖分頁時顯示，方便快速切換日期) */}
                 {activeBottomTab !== 'map' && (
-                  <div className="hidden md:block bg-slate-900/70 border border-slate-800/80 rounded-3xl p-4 space-y-3">
+                  <div className="hidden md:block bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-4 space-y-3">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setSelectedDate(formatDateKey(new Date()))}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-[0.97] ${
                             selectedDate === formatDateKey(new Date())
                               ? 'bg-emerald-500 text-slate-950'
-                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                              : 'bg-white/5 text-slate-300 hover:bg-white/10'
                           }`}
                         >
                           今天
@@ -2397,7 +2403,7 @@
                             setSelectedDate(formatDateKey(d));
                           }}
                           title="前一天"
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                          className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold text-slate-300 transition-all active:scale-[0.97]"
                         >
                           ◀
                         </button>
@@ -2410,7 +2416,7 @@
                             setSelectedDate(formatDateKey(d));
                           }}
                           title="後一天"
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 transition active:scale-95"
+                          className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold text-slate-300 transition-all active:scale-[0.97]"
                         >
                           ▶
                         </button>
@@ -2419,7 +2425,7 @@
                       <button
                         type="button"
                         onClick={() => setShowCalendarModal(true)}
-                        className="flex items-center gap-1.5 text-xs font-extrabold text-cyan-300 bg-slate-950 hover:bg-slate-800 border border-cyan-500/40 px-3.5 py-2 rounded-xl cursor-pointer shadow-sm transition active:scale-95"
+                        className="flex items-center gap-1.5 text-xs font-extrabold text-cyan-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-xl cursor-pointer shadow-sm transition-all active:scale-[0.97]"
                       >
                         <span>📅 選擇日期</span>
                       </button>
@@ -2432,12 +2438,12 @@
                           <button
                             key={d.dateStr}
                             onClick={() => setSelectedDate(d.dateStr)}
-                            className={`flex-shrink-0 min-w-[52px] py-2 px-2.5 rounded-2xl border flex flex-col items-center justify-center transition-all active:scale-95 ${
+                            className={`flex-shrink-0 min-w-[52px] py-2 px-2.5 rounded-2xl border flex flex-col items-center justify-center transition-all active:scale-[0.97] ${
                               isSelected
                                 ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 border-emerald-300 shadow-lg shadow-emerald-500/25 font-black'
                                 : d.isToday
-                                ? 'bg-slate-800/90 text-emerald-300 border-emerald-500/40'
-                                : 'bg-slate-950/70 text-slate-400 border-slate-800/80 hover:border-slate-700'
+                                ? 'bg-white/10 text-emerald-300 border-white/15'
+                                : 'bg-white/5 text-slate-400 border-white/5 hover:border-white/15'
                             }`}
                           >
                             <span className={`text-[10px] font-bold ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
@@ -2480,7 +2486,7 @@
 
                     {/* 右側 (md:col-span-7)：今日攝取紀錄明細列表 */}
                     <div className="md:col-span-7 space-y-4">
-                      <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-4 md:p-5 space-y-3.5">
+                      <section className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-4 md:p-5 space-y-3.5">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <h2 className="text-base font-extrabold text-white">
@@ -2494,14 +2500,14 @@
                             <button
                               type="button"
                               onClick={() => setActiveBottomTab('map')}
-                              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-cyan-300 border border-slate-700 transition active:scale-95"
+                              className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-extrabold text-cyan-300 border border-white/10 transition-all active:scale-[0.97]"
                             >
                               🗺️ 地圖找店
                             </button>
                             <button
                               type="button"
                               onClick={() => setActiveBottomTab('add')}
-                              className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-extrabold text-slate-950 shadow-md transition active:scale-95"
+                              className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-extrabold text-slate-950 shadow-md transition-all active:scale-[0.97]"
                             >
                               📸 新增餐點
                             </button>
@@ -2509,7 +2515,7 @@
                         </div>
 
                         {dailyItems.length === 0 ? (
-                          <div className="py-12 text-center space-y-3 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
+                          <div className="py-12 text-center space-y-3 bg-slate-950/40 rounded-2xl border border-dashed border-white/10">
                             <div className="text-3xl">🥩</div>
                             <div className="space-y-1">
                               <p className="text-sm font-bold text-slate-300">這天還沒有任何飲食紀錄</p>
@@ -2521,14 +2527,14 @@
                               <button
                                 type="button"
                                 onClick={() => setActiveBottomTab('add')}
-                                className="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-500/20"
+                                className="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.97]"
                               >
                                 📸 前往紀錄餐點
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setActiveBottomTab('map')}
-                                className="px-4 py-2.5 rounded-xl bg-slate-800 text-cyan-300 border border-slate-700 text-xs font-extrabold"
+                                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 text-xs font-extrabold transition-all active:scale-[0.97]"
                               >
                                 🗺️ 地圖探索餐廳
                               </button>
@@ -2541,21 +2547,21 @@
                               return (
                                 <div
                                   key={item.id}
-                                  className="bg-slate-950/90 border border-slate-800/90 rounded-2xl p-3.5 flex flex-col gap-2"
+                                  className="bg-slate-950/50 border border-white/5 rounded-2xl p-3.5 flex flex-col gap-2 shadow-lg"
                                 >
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="space-y-0.5">
                                       <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-xs px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 font-bold">
+                                        <span className="text-xs px-2 py-0.5 rounded-lg bg-white/10 text-slate-300 font-bold">
                                           {mealMeta.icon} {mealMeta.label}
                                         </span>
                                         {item.placeName && (
-                                          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
+                                          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-500/15 text-cyan-300 border border-white/10 font-bold">
                                             📍 {item.placeName}
                                           </span>
                                         )}
                                         {item.aiRecognized && (
-                                          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                                          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-white/10 font-bold">
                                             ✨ Gemini AI
                                           </span>
                                         )}
@@ -2576,7 +2582,7 @@
                                           disabled={savingFavId === item.id}
                                           onClick={() => handleSaveAsFavorite(item)}
                                           title="儲存至我的最愛總表（⭐ 存為常吃）並於背景綁定地點/座標"
-                                          className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-[11px] text-amber-300 font-extrabold transition active:scale-95 disabled:opacity-50"
+                                          className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-white/10 text-[11px] text-amber-300 font-extrabold transition-all active:scale-[0.97] disabled:opacity-50"
                                         >
                                           {savingFavId === item.id ? '定位儲存中...' : '⭐ 存為常吃'}
                                         </button>
@@ -2584,14 +2590,14 @@
                                           type="button"
                                           onClick={() => handleStartEditRecord(item)}
                                           title="修改此筆餐點名稱、份量與營養素"
-                                          className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-[11px] text-cyan-300 font-extrabold transition active:scale-95"
+                                          className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-white/10 text-[11px] text-cyan-300 font-extrabold transition-all active:scale-[0.97]"
                                         >
                                           ✏️ 修改
                                         </button>
                                         <button
                                           type="button"
                                           onClick={() => handleDeleteRecord(item.id)}
-                                          className="text-[11px] text-slate-500 hover:text-rose-400 font-semibold px-1"
+                                          className="text-[11px] text-slate-500 hover:text-rose-400 font-semibold px-1 transition-all active:scale-[0.97]"
                                         >
                                           刪除
                                         </button>
@@ -2599,16 +2605,16 @@
                                     </div>
                                   </div>
 
-                                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/70 text-xs font-bold">
-                                    <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5 text-xs font-bold">
+                                    <div className="bg-white/5 px-2.5 py-1.5 rounded-xl flex justify-between">
                                       <span className="text-slate-400">蛋白質</span>
                                       <span className="text-cyan-400">{item.protein}g</span>
                                     </div>
-                                    <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                    <div className="bg-white/5 px-2.5 py-1.5 rounded-xl flex justify-between">
                                       <span className="text-slate-400">碳水</span>
                                       <span className="text-amber-400">{item.carbs}g</span>
                                     </div>
-                                    <div className="bg-slate-900/90 px-2.5 py-1.5 rounded-xl flex justify-between">
+                                    <div className="bg-white/5 px-2.5 py-1.5 rounded-xl flex justify-between">
                                       <span className="text-slate-400">脂肪</span>
                                       <span className="text-rose-400">{item.fat}g</span>
                                     </div>
@@ -2627,21 +2633,21 @@
                 {activeBottomTab === 'add' && (
                   <section ref={formRef} className="space-y-4">
                     {/* 1. 輕量化地點綁定 (Background Binding) 毛玻璃藥丸標籤列 */}
-                    <div className="bg-slate-900/65 backdrop-blur-xl border border-white/15 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between flex-wrap gap-2">
+                    <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-2xl px-4 py-3 flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         {selectedPlace.mode === 'place' ? (
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-xs font-extrabold text-emerald-200 max-w-full">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-white/10 text-xs font-extrabold text-emerald-200 max-w-full">
                             <span className="truncate">📍 綁定：{selectedPlace.placeName}</span>
                             <button
                               type="button"
                               onClick={handleClearSelectedPlace}
-                              className="px-1.5 py-0.5 rounded-full bg-slate-950/60 hover:bg-rose-500/40 text-[10px] text-rose-200 transition flex-shrink-0"
+                              className="px-1.5 py-0.5 rounded-full bg-slate-950/60 hover:bg-rose-500/40 text-[10px] text-rose-200 transition-all active:scale-[0.97] flex-shrink-0"
                             >
                               ✕ 清除
                             </button>
                           </div>
                         ) : selectedPlace.mode === 'custom_gps' ? (
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-xs font-extrabold text-cyan-200 max-w-full">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/20 border border-white/10 text-xs font-extrabold text-cyan-200 max-w-full">
                             <span className="truncate">
                               📡 綁定：
                               {selectedPlace.placeName && selectedPlace.placeName !== '📍 自訂當前位置'
@@ -2651,13 +2657,13 @@
                             <button
                               type="button"
                               onClick={handleClearSelectedPlace}
-                              className="px-1.5 py-0.5 rounded-full bg-slate-950/60 hover:bg-rose-500/40 text-[10px] text-rose-200 transition flex-shrink-0"
+                              className="px-1.5 py-0.5 rounded-full bg-slate-950/60 hover:bg-rose-500/40 text-[10px] text-rose-200 transition-all active:scale-[0.97] flex-shrink-0"
                             >
                               ✕ 清除
                             </button>
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs font-bold text-slate-300">
                             🏠 無特定店家 (將自動使用 GPS)
                           </span>
                         )}
@@ -2677,14 +2683,14 @@
                             });
                             showToast('📡 已切換為 GPS 智慧座標綁定（自動比對 25m 內歷史餐點）');
                           }}
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-[11px] font-bold text-cyan-300 border border-slate-700 transition active:scale-95"
+                          className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-cyan-300 border border-white/10 transition-all active:scale-[0.97]"
                         >
                           📡 綁定當前 GPS
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveBottomTab('map')}
-                          className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-[11px] font-extrabold text-cyan-200 border border-cyan-400/40 transition active:scale-95"
+                          className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-[11px] font-extrabold text-cyan-200 border border-white/10 transition-all active:scale-[0.97]"
                         >
                           🗺️ 地圖選店 / 搜尋
                         </button>
@@ -2692,12 +2698,12 @@
                     </div>
 
                     {/* 📍 附近常吃推薦 (GPS 20m Haversine 精準防擾，由近到遠最多顯示前 3 筆) */}
-                    <section className="bg-gradient-to-r from-slate-900 via-[#0E172A] to-slate-900 border border-cyan-500/30 rounded-3xl p-3.5 shadow-xl space-y-2.5">
+                    <section className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-3.5 space-y-2.5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-black text-white flex items-center gap-1.5">
                             <span>📍 附近常吃推薦</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-white/10 font-extrabold">
                               20m 精準感應 · Top 3
                             </span>
                           </span>
@@ -2707,7 +2713,7 @@
                           <button
                             type="button"
                             onClick={() => refreshGpsLocation(false)}
-                            className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 border border-slate-700 transition active:scale-95"
+                            className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-slate-300 border border-white/10 transition-all active:scale-[0.97]"
                           >
                             {gpsStatus === 'locating' ? '定位中...' : '🔄 重新定位'}
                           </button>
@@ -2715,7 +2721,7 @@
                             type="button"
                             onClick={handleSimulateNearby20m}
                             title="模擬抵達常吃店家門口 20 公尺內，測試 Haversine 距離排序與 Top 3 推薦"
-                            className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-[11px] font-extrabold text-emerald-300 border border-emerald-500/30 transition active:scale-95"
+                            className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-[11px] font-extrabold text-emerald-300 border border-white/10 transition-all active:scale-[0.97]"
                           >
                             🧪 模擬抵達店門口
                           </button>
@@ -2723,7 +2729,7 @@
                             <button
                               type="button"
                               onClick={() => setShowFavManager((v) => !v)}
-                              className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-amber-300 border border-slate-700 transition"
+                              className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-amber-300 border border-white/10 transition-all active:scale-[0.97]"
                             >
                               ⭐ 常吃庫 ({favorites.length})
                             </button>
@@ -2736,11 +2742,11 @@
                           {nearbyFavorites.map((fav, idx) => (
                             <div
                               key={fav.id}
-                              className="flex-shrink-0 w-64 bg-slate-950/95 border border-emerald-500/40 rounded-2xl p-3 flex flex-col justify-between gap-2 shadow-lg shadow-emerald-500/5"
+                              className="flex-shrink-0 w-64 bg-slate-950/60 border border-white/5 rounded-2xl p-3 flex flex-col justify-between gap-2 shadow-xl"
                             >
                               <div>
                                 <div className="flex items-center justify-between gap-1 mb-1">
-                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-white/10">
                                     #{idx + 1} 距離 {fav.distanceMeters.toFixed(1)}m
                                   </span>
                                   <span className="text-xs font-black text-emerald-400">
@@ -2755,11 +2761,11 @@
                                 </p>
                               </div>
 
-                              <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
+                              <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
                                 <button
                                   type="button"
                                   onClick={() => populateFormWithFood(fav, false)}
-                                  className="flex-1 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition"
+                                  className="flex-1 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-bold transition-all active:scale-[0.97]"
                                 >
                                   帶入微調
                                 </button>
@@ -2775,7 +2781,7 @@
                                       fat: fav.fat
                                     })
                                   }
-                                  className="flex-1 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black transition active:scale-95"
+                                  className="flex-1 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black transition-all active:scale-[0.97]"
                                 >
                                   ＋紀錄
                                 </button>
@@ -2784,7 +2790,7 @@
                           ))}
                         </div>
                       ) : (
-                        <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs">
+                        <div className="bg-slate-950/50 border border-white/5 rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs">
                           <div className="text-slate-400 leading-relaxed">
                             {gpsStatus === 'denied' || gpsStatus === 'error' ? (
                               <span>
@@ -2804,7 +2810,7 @@
                       )}
 
                       {showFavManager && favorites.length > 0 && (
-                        <div className="pt-2 border-t border-slate-800 space-y-2">
+                        <div className="pt-2 border-t border-white/5 space-y-2">
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-bold text-amber-300">
                               ⭐ 已儲存的我的最愛常吃菜單 (共 {favorites.length} 筆)
@@ -2812,7 +2818,7 @@
                             <button
                               type="button"
                               onClick={() => setShowFavManager(false)}
-                              className="text-slate-400 hover:text-white text-[11px]"
+                              className="text-slate-400 hover:text-white text-[11px] transition-all active:scale-[0.97]"
                             >
                               收合 ▲
                             </button>
@@ -2831,7 +2837,7 @@
                               return (
                                 <div
                                   key={fav.id}
-                                  className="flex-shrink-0 w-60 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 flex flex-col justify-between gap-1.5"
+                                  className="flex-shrink-0 w-60 bg-slate-950/60 border border-white/5 rounded-2xl p-2.5 flex flex-col justify-between gap-1.5"
                                 >
                                   <div className="flex items-start justify-between gap-1">
                                     <span className="text-xs font-extrabold text-white truncate">
@@ -2840,7 +2846,7 @@
                                     <button
                                       type="button"
                                       onClick={() => handleDeleteFavorite(fav.id)}
-                                      className="text-[10px] text-slate-500 hover:text-rose-400"
+                                      className="text-[10px] text-slate-500 hover:text-rose-400 transition-all active:scale-[0.97]"
                                     >
                                       ✕
                                     </button>
@@ -2848,7 +2854,7 @@
                                   <div className="text-[10px] text-slate-400">
                                     {fav.calories} kcal · P {fav.protein}g / C {fav.carbs}g / F {fav.fat}g
                                   </div>
-                                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                                  <div className="flex items-center justify-between pt-1 border-t border-white/5">
                                     <span className="text-[10px] text-cyan-400">
                                       {typeof dist === 'number' && Number.isFinite(dist)
                                         ? `距離 ${dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}`
@@ -2868,7 +2874,7 @@
                                           fat: fav.fat
                                         })
                                       }
-                                      className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[10px] font-black"
+                                      className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[10px] font-black transition-all active:scale-[0.97]"
                                     >
                                       ＋紀錄
                                     </button>
@@ -2883,11 +2889,11 @@
 
                     {/* 2. 📜 過去在此點過的餐點（SMART PLACE MEMORY）：僅在 selectedPlace.mode !== 'none' 且 placeHistoryItems.length > 0 時顯示 */}
                     {selectedPlace.mode !== 'none' && placeHistoryItems.length > 0 && (
-                      <div className="bg-slate-900/95 border border-emerald-500/35 rounded-3xl p-4 space-y-3 shadow-xl">
+                      <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-4 space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-white/10">
                                 SMART PLACE MEMORY
                               </span>
                               <span className="text-[11px] font-extrabold text-emerald-400">
@@ -2907,7 +2913,7 @@
                           {placeHistoryItems.map((histItem) => (
                             <div
                               key={histItem.id}
-                              className="bg-slate-950/90 hover:border-emerald-400/60 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between gap-2.5 transition shadow-md"
+                              className="bg-slate-950/60 hover:bg-slate-950/80 border border-white/5 rounded-2xl p-3 flex flex-col justify-between gap-2.5 transition shadow-md"
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
@@ -2922,13 +2928,13 @@
                                   </p>
                                 </div>
                                 {histItem.dateKey && histItem.dateKey !== '常吃收藏' && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/5 whitespace-nowrap">
                                     上次：{histItem.dateKey.slice(5)}
                                   </span>
                                 )}
                               </div>
 
-                              <div className="flex items-center justify-between text-[11px] font-bold bg-slate-900/90 px-2.5 py-1.5 rounded-xl">
+                              <div className="flex items-center justify-between text-[11px] font-bold bg-white/5 px-2.5 py-1.5 rounded-xl">
                                 <span className="text-cyan-400">蛋白質 {histItem.protein}g</span>
                                 <span className="text-amber-400">碳水 {histItem.carbs}g</span>
                                 <span className="text-rose-400">脂肪 {histItem.fat}g</span>
@@ -2955,7 +2961,7 @@
                                     );
                                     showToast(`📝 已將「${histItem.foodName}」帶入下方表單微調`);
                                   }}
-                                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition active:scale-95"
+                                  className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-bold transition-all active:scale-[0.97]"
                                 >
                                   帶入微調
                                 </button>
@@ -2975,7 +2981,7 @@
                                       lng: selectedPlace.lng ?? histItem.lng ?? null
                                     })
                                   }
-                                  className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-[11px] font-black transition active:scale-95 shadow-sm"
+                                  className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-[11px] font-black transition-all active:scale-[0.97] shadow-sm"
                                 >
                                   ⚡ 一鍵沿用紀錄
                                 </button>
@@ -2987,11 +2993,11 @@
                     )}
 
                     {/* 3. ⭐ 我的常吃餐點（我的最愛總表，預設收合） */}
-                    <div className="bg-slate-900/90 border border-amber-500/35 rounded-3xl p-4 space-y-2.5 shadow-lg">
+                    <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-4 space-y-2.5">
                       <button
                         type="button"
                         onClick={() => setShowAddFavorites((v) => !v)}
-                        className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group"
+                        className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group transition-all active:scale-[0.97]"
                       >
                         <div>
                           <h2 className="text-sm font-black text-amber-300 flex items-center gap-1.5 group-hover:text-amber-200 transition">
@@ -3004,16 +3010,16 @@
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                          <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-white/10 whitespace-nowrap">
                             {showAddFavorites ? `收合 ▲` : `展開 (${favorites.length}) ▼`}
                           </span>
                         </div>
                       </button>
 
                       {showAddFavorites && (
-                        <div className="pt-2 border-t border-slate-800/80">
+                        <div className="pt-2 border-t border-white/5">
                           {favorites.length === 0 ? (
-                            <div className="bg-slate-950/70 border border-dashed border-slate-800 rounded-2xl p-3 text-xs text-slate-400">
+                            <div className="bg-slate-950/50 border border-dashed border-white/10 rounded-2xl p-3 text-xs text-slate-400">
                               💡 尚未收藏常吃餐點！您可以在每日飲食紀錄明細旁點擊「<strong className="text-amber-300">⭐ 存為常吃</strong>」，之後就能在這裡一鍵秒速打卡。
                             </div>
                           ) : (
@@ -3021,7 +3027,7 @@
                               {favorites.map((fav) => (
                                 <div
                                   key={fav.id}
-                                  className="min-w-[215px] max-w-[240px] flex-shrink-0 bg-slate-950/90 hover:border-amber-400/60 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between gap-2 transition"
+                                  className="min-w-[215px] max-w-[240px] flex-shrink-0 bg-slate-950/60 hover:bg-slate-950/80 border border-white/5 rounded-2xl p-3 flex flex-col justify-between gap-2 transition"
                                 >
                                   <div className="flex items-start justify-between gap-1.5">
                                     <div className="min-w-0">
@@ -3044,13 +3050,13 @@
                                       type="button"
                                       onClick={() => handleDeleteFavorite(fav.id)}
                                       title="移除此常吃項目"
-                                      className="text-[11px] text-slate-500 hover:text-rose-400 px-1"
+                                      className="text-[11px] text-slate-500 hover:text-rose-400 px-1 transition-all active:scale-[0.97]"
                                     >
                                       ✕
                                     </button>
                                   </div>
 
-                                  <div className="flex items-center justify-between text-[11px] font-bold bg-slate-900/90 px-2.5 py-1 rounded-xl">
+                                  <div className="flex items-center justify-between text-[11px] font-bold bg-white/5 px-2.5 py-1 rounded-xl">
                                     <span className="text-cyan-400">P {fav.protein}g</span>
                                     <span className="text-amber-400">C {fav.carbs}g</span>
                                     <span className="text-rose-400">F {fav.fat}g</span>
@@ -3076,7 +3082,7 @@
                                           false
                                         )
                                       }
-                                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition active:scale-95"
+                                      className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-bold transition-all active:scale-[0.97]"
                                     >
                                       帶入微調
                                     </button>
@@ -3096,7 +3102,7 @@
                                           lng: fav.lng ?? null
                                         })
                                       }
-                                      className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-slate-950 text-[11px] font-black transition active:scale-95"
+                                      className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-slate-950 text-[11px] font-black transition-all active:scale-[0.97]"
                                     >
                                       ⚡ 一鍵紀錄
                                     </button>
@@ -3113,9 +3119,9 @@
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                       {/* 左欄：AI 拍照與文字問 AI (md:col-span-5) */}
                       <div className="md:col-span-5 space-y-4">
-                        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-500/30 rounded-3xl p-4 space-y-3.5 shadow-xl">
+                        <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-4 space-y-3.5">
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-white/10">
                               GEMINI VISION AI
                             </span>
                             <h2 className="text-base font-extrabold text-white mt-1">
@@ -3127,7 +3133,7 @@
                           </div>
 
                           <div className="grid grid-cols-2 gap-2.5">
-                            <label className="min-h-[54px] rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 transition active:scale-95">
+                            <label className="min-h-[54px] rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.97]">
                               <span>📷 拍照 / 選取照片</span>
                               <input
                                 type="file"
@@ -3138,7 +3144,7 @@
                               />
                             </label>
 
-                            <label className="min-h-[54px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition active:scale-95">
+                            <label className="min-h-[54px] rounded-2xl bg-white/5 hover:bg-white/10 text-slate-100 border border-white/10 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.97]">
                               <span>🖼️ 從相簿上傳</span>
                               <input
                                 type="file"
@@ -3155,14 +3161,14 @@
                               value={aiUserHint}
                               onChange={(e) => setAiUserHint(e.target.value)}
                               placeholder="選填補充說明（例如：飯吃一半、雞腿去皮）"
-                              className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                              className="flex-1 bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                             />
                             {aiImagePayload && (
                               <button
                                 type="button"
                                 disabled={aiLoading}
                                 onClick={() => triggerGeminiAnalysis()}
-                                className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs disabled:opacity-50"
+                                className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs transition-all active:scale-[0.97] disabled:opacity-50"
                               >
                                 重新辨識
                               </button>
@@ -3170,7 +3176,7 @@
                           </div>
 
                           {aiPreviewUrl && (
-                            <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
+                            <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-slate-950">
                               <img
                                 src={aiPreviewUrl}
                                 alt="Food preview"
@@ -3187,7 +3193,7 @@
                             </div>
                           )}
 
-                          <div className="pt-1 border-t border-slate-800/80">
+                          <div className="pt-1 border-t border-white/5">
                             <p className="text-[11px] text-slate-400 mb-2">
                               💡 快速測試 AI 辨識結果自動帶入表單：
                             </p>
@@ -3231,7 +3237,7 @@
                                     populateFormWithFood(demo, true);
                                     showToast(`✨ AI 辨識結果已自動填入表單，請確認！`);
                                   }}
-                                  className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-semibold transition"
+                                  className="text-xs px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-emerald-300 border border-white/10 font-semibold transition-all active:scale-[0.97]"
                                 >
                                   ✨ 測試：{demo.foodName.split('（')[0].split(' ')[0]}
                                 </button>
@@ -3241,9 +3247,9 @@
                         </div>
 
                         {/* 💬 文字快速問 AI (Text-to-AI) 區塊 */}
-                        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-4 space-y-3 shadow-xl">
+                        <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-4 space-y-3">
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-white/10">
                               TEXT-TO-AI 純文字估算
                             </span>
                             <h2 className="text-base font-extrabold text-white mt-1">
@@ -3266,13 +3272,13 @@
                                 }
                               }}
                               placeholder="例如：一碗蝦仁蛋炒飯、大碗牛肉麵加滷蛋..."
-                              className="flex-1 min-h-[48px] bg-slate-950/90 border border-slate-800 rounded-2xl px-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                              className="flex-1 min-h-[48px] bg-slate-950/60 border border-white/10 rounded-2xl px-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                             />
                             <button
                               type="button"
                               disabled={aiTextLoading}
                               onClick={() => triggerTextToAiAnalysis()}
-                              className="min-h-[48px] px-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-lg shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50"
+                              className="min-h-[48px] px-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-lg shadow-cyan-500/20 transition-all active:scale-[0.97] disabled:opacity-50"
                             >
                               {aiTextLoading ? 'AI 估算中...' : '🤖 AI 估算'}
                             </button>
@@ -3293,7 +3299,7 @@
                                   setAiTextQuery(sample);
                                   triggerTextToAiAnalysis(sample);
                                 }}
-                                className="text-[11px] px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-semibold transition"
+                                className="text-[11px] px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 font-semibold transition-all active:scale-[0.97]"
                               >
                                 💬 {sample}
                               </button>
@@ -3306,7 +3312,7 @@
                       <div className="md:col-span-7">
                         <form
                           onSubmit={handleAddRecordSubmit}
-                          className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 md:p-5 space-y-4 shadow-xl"
+                          className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 shadow-2xl rounded-3xl p-4 md:p-5 space-y-4"
                         >
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <h3 className="text-base font-extrabold text-white">
@@ -3319,13 +3325,13 @@
                                 <button
                                   type="button"
                                   onClick={handleCancelEditRecord}
-                                  className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold transition"
+                                  className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-white/10 font-bold transition-all active:scale-[0.97]"
                                 >
                                   ✕ 取消修改
                                 </button>
                               )}
                               {formState.aiRecognized && (
-                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-white/10 font-bold">
                                   ✨ AI 已自動帶入
                                 </span>
                               )}
@@ -3343,10 +3349,10 @@
                                   key={m.id}
                                   type="button"
                                   onClick={() => setFormState((s) => ({ ...s, mealType: m.id }))}
-                                  className={`py-2 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-0.5 ${
+                                  className={`py-2 rounded-xl text-xs font-bold border transition-all active:scale-[0.97] flex flex-col items-center gap-0.5 ${
                                     formState.mealType === m.id
-                                      ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-sm'
-                                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                                      ? 'bg-emerald-500/25 border-white/20 text-emerald-300 shadow-sm'
+                                      : 'bg-slate-950/60 border-white/5 text-slate-400 hover:text-slate-200'
                                   }`}
                                 >
                                   <span>{m.icon}</span>
@@ -3357,7 +3363,7 @@
                           </div>
 
                           {formState.aiNotes && (
-                            <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 leading-relaxed">
+                            <div className="p-3 rounded-2xl bg-emerald-950/40 border border-white/10 text-xs text-emerald-200 leading-relaxed">
                               <strong>🤖 Gemini 營養分析：</strong> {formState.aiNotes}
                             </div>
                           )}
@@ -3375,7 +3381,7 @@
                                   setFormState((s) => ({ ...s, foodName: e.target.value }))
                                 }
                                 placeholder="例如：舒肥雞胸肉便當、鮪魚蛋餅"
-                                className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
+                                className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
                               />
                             </div>
                             <div>
@@ -3389,13 +3395,13 @@
                                   setFormState((s) => ({ ...s, portion: e.target.value }))
                                 }
                                 placeholder="例如：1份 / 200g"
-                                className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
+                                className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-emerald-400"
                               />
                             </div>
                           </div>
 
                           {baseFormValues && (
-                            <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800">
+                            <div className="flex items-center justify-between bg-slate-950/60 p-2.5 rounded-2xl border border-white/5">
                               <span className="text-xs font-bold text-slate-400">
                                 快速調整份量倍率：
                               </span>
@@ -3405,10 +3411,10 @@
                                     key={scale}
                                     type="button"
                                     onClick={() => handleScaleChange(scale)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition ${
+                                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all active:scale-[0.97] ${
                                       portionScale === scale
                                         ? 'bg-emerald-500 text-slate-950'
-                                        : 'bg-slate-800 text-slate-300'
+                                        : 'bg-white/5 text-slate-300'
                                     }`}
                                   >
                                     {scale}x
@@ -3419,7 +3425,7 @@
                           )}
 
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                            <div className="bg-slate-950 p-3 rounded-2xl border border-cyan-500/30">
+                            <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5">
                               <label className="block text-[11px] font-extrabold text-cyan-400 mb-1">
                                 蛋白質 (g)
                               </label>
@@ -3437,7 +3443,7 @@
                               />
                             </div>
 
-                            <div className="bg-slate-950 p-3 rounded-2xl border border-amber-500/30">
+                            <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5">
                               <label className="block text-[11px] font-extrabold text-amber-400 mb-1">
                                 碳水化合物 (g)
                               </label>
@@ -3455,7 +3461,7 @@
                               />
                             </div>
 
-                            <div className="bg-slate-950 p-3 rounded-2xl border border-rose-500/30">
+                            <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5">
                               <label className="block text-[11px] font-extrabold text-rose-400 mb-1">
                                 脂肪 (g)
                               </label>
@@ -3473,7 +3479,7 @@
                               />
                             </div>
 
-                            <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-500/30">
+                            <div className="bg-slate-950/60 p-3 rounded-2xl border border-white/5">
                               <div className="flex items-center justify-between mb-1">
                                 <label className="block text-[11px] font-extrabold text-emerald-400">
                                   總熱量 (kcal)
@@ -3489,7 +3495,7 @@
                                       calories: String(Math.round(p * 4 + c * 4 + f * 9))
                                     }));
                                   }}
-                                  className="text-[10px] text-emerald-300 underline"
+                                  className="text-[10px] text-emerald-300 underline transition-all active:scale-[0.97]"
                                 >
                                   自動算
                                 </button>
@@ -3511,7 +3517,7 @@
 
                           <button
                             type="submit"
-                            className="w-full min-h-[54px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 transition active:scale-95"
+                            className="w-full min-h-[54px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.97]"
                           >
                             {editingLogId
                               ? `💾 儲存修改並同步至 ${selectedDate}`
@@ -3540,15 +3546,15 @@
                 )}
               </main>
 
-              {/* 手機底部大按鈕導覽列（md:hidden 僅在手機版顯示，3 個全懸浮毛玻璃按鈕） */}
-              <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-transparent border-none pointer-events-none px-3 py-2">
-                <div className="max-w-lg mx-auto grid grid-cols-3 gap-2 pointer-events-auto">
+              {/* 手機底部導覽列（iOS 液態毛玻璃質感） */}
+              <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#070b12]/60 backdrop-blur-3xl backdrop-saturate-[2.5] border-t border-white/10 shadow-[0_-15px_40px_rgba(0,0,0,0.5)] pb-[env(safe-area-inset-bottom)]">
+                <div className="max-w-lg mx-auto grid grid-cols-3 gap-2 px-3 py-2">
                   <button
                     onClick={() => setActiveBottomTab('dashboard')}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 backdrop-blur-xl shadow-2xl ${
+                    className={`min-h-[52px] flex items-center justify-center gap-1.5 font-extrabold text-xs transition-all active:scale-[0.97] ${
                       activeBottomTab === 'dashboard'
-                        ? 'bg-slate-900/85 text-emerald-300 border border-emerald-400/60'
-                        : 'bg-slate-900/70 text-slate-200 hover:text-white border border-white/20 hover:bg-slate-900/85'
+                        ? 'text-emerald-300 bg-white/5 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                        : 'text-slate-400 hover:text-white transition'
                     }`}
                   >
                     <span className="text-base">📊</span>
@@ -3557,10 +3563,10 @@
 
                   <button
                     onClick={() => setActiveBottomTab('add')}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 backdrop-blur-xl shadow-2xl ${
+                    className={`min-h-[52px] flex items-center justify-center gap-1.5 font-extrabold text-xs transition-all active:scale-[0.97] ${
                       activeBottomTab === 'add'
-                        ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 border border-white/40'
-                        : 'bg-slate-900/70 text-emerald-300 hover:text-emerald-200 border border-white/20 hover:bg-slate-900/85'
+                        ? 'text-emerald-300 bg-white/5 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                        : 'text-slate-400 hover:text-white transition'
                     }`}
                   >
                     <span className="text-base">📸</span>
@@ -3569,10 +3575,10 @@
 
                   <button
                     onClick={() => setActiveBottomTab('map')}
-                    className={`min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 font-extrabold text-xs transition active:scale-95 backdrop-blur-xl shadow-2xl ${
+                    className={`min-h-[52px] flex items-center justify-center gap-1.5 font-extrabold text-xs transition-all active:scale-[0.97] ${
                       activeBottomTab === 'map'
-                        ? 'bg-slate-900/85 text-cyan-300 border border-cyan-400/60'
-                        : 'bg-slate-900/70 text-slate-200 hover:text-white border border-white/20 hover:bg-slate-900/85'
+                        ? 'text-emerald-300 bg-white/5 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                        : 'text-slate-400 hover:text-white transition'
                     }`}
                   >
                     <span className="text-base">🗺️</span>
@@ -3705,7 +3711,7 @@
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#0E1525] border border-slate-700 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl"
+            className="bg-slate-900/60 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -3715,18 +3721,18 @@
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center"
+                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-bold flex items-center justify-center transition-all active:scale-[0.97]"
               >
                 ✕
               </button>
             </div>
 
             {/* 月份切換列 */}
-            <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-2xl border border-slate-800">
+            <div className="flex items-center justify-between bg-slate-950/60 p-2.5 rounded-2xl border border-white/5">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 transition active:scale-95"
+                className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-extrabold text-slate-200 transition-all active:scale-[0.97]"
               >
                 ◀ 上個月
               </button>
@@ -3736,7 +3742,7 @@
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 transition active:scale-95"
+                className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-extrabold text-slate-200 transition-all active:scale-[0.97]"
               >
                 下個月 ▶
               </button>
@@ -3760,12 +3766,12 @@
                     key={cell.dateStr}
                     type="button"
                     onClick={() => onSelectDate(cell.dateStr)}
-                    className={`h-11 rounded-xl flex flex-col items-center justify-center border transition active:scale-95 ${
+                    className={`h-11 rounded-xl flex flex-col items-center justify-center border transition-all active:scale-[0.97] ${
                       cell.isSelected
                         ? 'bg-emerald-500 text-slate-950 border-emerald-300 font-black shadow-lg shadow-emerald-500/25'
                         : cell.isToday
-                        ? 'bg-slate-800 text-emerald-300 border-emerald-500/50 font-extrabold'
-                        : 'bg-slate-950/70 hover:bg-slate-800/80 text-slate-200 border-slate-800/70 font-bold'
+                        ? 'bg-white/10 text-emerald-300 border-white/15 font-extrabold'
+                        : 'bg-slate-950/60 hover:bg-white/10 text-slate-200 border-white/5 font-bold'
                     }`}
                   >
                     <span className="text-xs leading-none">{cell.day}</span>
@@ -3788,7 +3794,7 @@
             </div>
 
             {/* 圖例與快速跳回今天 */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+            <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
               <div className="flex items-center gap-3 text-[11px] text-slate-400">
                 <span className="flex items-center gap-1">
                   <i className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> 增肌達標
@@ -3800,7 +3806,7 @@
               <button
                 type="button"
                 onClick={() => onSelectDate(todayStr)}
-                className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-extrabold transition"
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-white/10 text-emerald-300 font-extrabold transition-all active:scale-[0.97]"
               >
                 跳回今天 ({todayStr})
               </button>
@@ -3872,17 +3878,17 @@
       const remainingCalories = targets.targetCalories - Math.round(dailyTotals.calories);
 
       return (
-        <section className="bg-gradient-to-b from-slate-900 to-[#0B1220] border border-slate-800/90 rounded-3xl p-4 shadow-2xl space-y-4">
+        <section className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 rounded-3xl p-4 shadow-2xl space-y-4">
           {/* 1. 訓練日 / 休息日動態目標切換開關 (綁定 selectedDate 並同步雲端) */}
-          <div className="bg-slate-950/90 p-2 rounded-2xl border border-slate-800 space-y-1.5">
+          <div className="bg-slate-950/60 p-2 rounded-2xl border border-white/5 space-y-1.5">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => onToggleTrainingDay && onToggleTrainingDay(true)}
-                className={`py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 ${
                   isTrainingDay
                     ? 'bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    : 'bg-white/5 text-slate-400 hover:text-slate-200 border border-white/5'
                 }`}
               >
                 <span>💪 今日有訓練 (約2小時)</span>
@@ -3890,10 +3896,10 @@
               <button
                 type="button"
                 onClick={() => onToggleTrainingDay && onToggleTrainingDay(false)}
-                className={`py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 ${
                   !isTrainingDay
                     ? 'bg-gradient-to-r from-indigo-400 to-cyan-400 text-slate-950 shadow-md shadow-indigo-500/20'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    : 'bg-white/5 text-slate-400 hover:text-slate-200 border border-white/5'
                 }`}
               >
                 <span>🛌 今日休息 (-300 kcal)</span>
@@ -3906,13 +3912,13 @@
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 bg-slate-950/90 p-2.5 rounded-2xl border border-slate-800/80 text-center">
+          <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-2.5 rounded-2xl border border-white/5 text-center">
             <div>
               <span className="text-[10px] font-bold text-slate-400 block">BMR 基礎代謝</span>
               <span className="text-sm font-black text-slate-200">{targets.bmr}</span>
               <span className="text-[10px] text-slate-500 ml-0.5">kcal</span>
             </div>
-            <div className="border-x border-slate-800">
+            <div className="border-x border-white/5">
               <span className="text-[10px] font-bold text-slate-400 block">
                 {isTrainingDay ? 'TDEE 訓練消耗' : 'TDEE 休息日調整'}
               </span>
@@ -3986,7 +3992,7 @@
                       : `超標 ${Math.abs(remainingCalories)} kcal`}
                   </span>
                 </div>
-                <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden mt-1 border border-slate-800">
+                <div className="w-full h-3 bg-slate-950/70 rounded-full overflow-hidden mt-1 border border-white/5">
                   <div
                     className="h-full bg-gradient-to-r from-emerald-500 to-lime-400 rounded-full transition-all duration-500"
                     style={{ width: `${calPercent}%` }}
@@ -3995,15 +4001,15 @@
               </div>
 
               <div className="grid grid-cols-3 gap-1.5 pt-1">
-                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2 text-center">
+                <div className="bg-slate-950/60 border border-white/5 rounded-xl p-2 text-center">
                   <span className="text-[10px] text-cyan-400 font-bold block">● 蛋白質佔比</span>
                   <span className="text-xs font-black text-white">{pRatio}%</span>
                 </div>
-                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2 text-center">
+                <div className="bg-slate-950/60 border border-white/5 rounded-xl p-2 text-center">
                   <span className="text-[10px] text-amber-400 font-bold block">● 碳水佔比</span>
                   <span className="text-xs font-black text-white">{cRatio}%</span>
                 </div>
-                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2 text-center">
+                <div className="bg-slate-950/60 border border-white/5 rounded-xl p-2 text-center">
                   <span className="text-[10px] text-rose-400 font-bold block">● 脂肪佔比</span>
                   <span className="text-xs font-black text-white">{fRatio}%</span>
                 </div>
@@ -4011,7 +4017,7 @@
             </div>
           </div>
 
-          <div className="space-y-3 pt-2 border-t border-slate-800/80">
+          <div className="space-y-3 pt-2 border-t border-white/5">
             <div>
               <div className="flex justify-between items-center text-xs mb-1">
                 <span className="font-extrabold text-cyan-400">🥩 蛋白質 (Protein)</span>
@@ -4019,7 +4025,7 @@
                   <strong className="text-white">{dailyTotals.protein.toFixed(1)}</strong> / {targets.protein} g ({proPercent}%)
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="w-full h-2.5 bg-slate-950/70 rounded-full overflow-hidden border border-white/5">
                 <div
                   className="h-full bg-gradient-to-r from-cyan-500 to-sky-400 rounded-full transition-all duration-500"
                   style={{ width: `${proPercent}%` }}
@@ -4036,7 +4042,7 @@
                   <strong className="text-white">{dailyTotals.carbs.toFixed(1)}</strong> / {targets.carbs} g ({carbPercent}%)
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="w-full h-2.5 bg-slate-950/70 rounded-full overflow-hidden border border-white/5">
                 <div
                   className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
                   style={{ width: `${carbPercent}%` }}
@@ -4051,7 +4057,7 @@
                   <strong className="text-white">{dailyTotals.fat.toFixed(1)}</strong> / {targets.fat} g ({fatPercent}%)
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="w-full h-2.5 bg-slate-950/70 rounded-full overflow-hidden border border-white/5">
                 <div
                   className="h-full bg-gradient-to-r from-rose-500 to-pink-400 rounded-full transition-all duration-500"
                   style={{ width: `${fatPercent}%` }}
@@ -4061,7 +4067,7 @@
           </div>
 
           {/* 2. 💧 客製化 900ml 保溫杯水分追蹤系統 */}
-          <div className="bg-slate-950/90 border border-sky-500/30 rounded-2xl p-3.5 space-y-2.5">
+          <div className="bg-slate-950/60 border border-white/5 rounded-2xl p-3.5 space-y-2.5">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -4069,7 +4075,7 @@
                     💧 水分追蹤（900ml 保溫杯專屬換算）
                   </span>
                   {waterPercent >= 100 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 font-black">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-white/10 font-black">
                       🎉 今日喝水達標！
                     </span>
                   )}
@@ -4090,7 +4096,7 @@
               </div>
             </div>
 
-            <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+            <div className="w-full h-3 bg-slate-950/70 rounded-full overflow-hidden border border-white/5">
               <div
                 className="h-full bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 rounded-full transition-all duration-500"
                 style={{ width: `${waterPercent}%` }}
@@ -4101,14 +4107,14 @@
               <button
                 type="button"
                 onClick={() => onAddWater && onAddWater(900)}
-                className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-400 hover:from-sky-400 hover:to-cyan-300 text-slate-950 text-xs font-black shadow-md shadow-sky-500/20 transition active:scale-95"
+                className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-400 hover:from-sky-400 hover:to-cyan-300 text-slate-950 text-xs font-black shadow-md shadow-sky-500/20 transition-all active:scale-[0.97]"
               >
                 ＋喝滿 1 瓶 (900ml)
               </button>
               <button
                 type="button"
                 onClick={() => onAddWater && onAddWater(450)}
-                className="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 text-xs font-extrabold transition active:scale-95"
+                className="flex-1 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-sky-300 border border-white/10 text-xs font-extrabold transition-all active:scale-[0.97]"
               >
                 ＋喝半瓶 (450ml)
               </button>
@@ -4117,7 +4123,7 @@
                   type="button"
                   onClick={() => onAddWater && onAddWater(-450)}
                   title="扣減 450ml"
-                  className="py-2 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-300 border border-slate-800 text-[11px] font-bold transition"
+                  className="py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-300 border border-white/5 text-[11px] font-bold transition-all active:scale-[0.97]"
                 >
                   -450
                 </button>
@@ -4127,10 +4133,10 @@
 
           {/* 4. 💡 台灣超商版「智慧達標補給建議」區塊 */}
           <div
-            className={`rounded-2xl p-3.5 border transition-all ${
+            className={`rounded-2xl p-3.5 border border-white/5 transition-all ${
               macroSuggestion.isGoalMet
-                ? 'bg-gradient-to-r from-emerald-950/70 via-emerald-900/30 to-cyan-950/60 border-emerald-400/50 shadow-lg shadow-emerald-500/10'
-                : 'bg-gradient-to-r from-amber-950/40 via-slate-950/90 to-emerald-950/40 border-amber-500/40 shadow-lg shadow-amber-500/5'
+                ? 'bg-emerald-950/30 shadow-lg'
+                : 'bg-slate-950/60 shadow-lg'
             }`}
           >
             <div className="space-y-2.5">
@@ -4144,7 +4150,7 @@
                     {macroSuggestion.title}
                   </span>
                   {!macroSuggestion.isGoalMet && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900/90 text-amber-300 border border-amber-500/30 font-extrabold">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-amber-300 border border-white/10 font-extrabold">
                       缺口：P {macroSuggestion.remainingProtein}g · C{' '}
                       {macroSuggestion.remainingCarbs}g · F {macroSuggestion.remainingFat}g
                     </span>
@@ -4163,7 +4169,7 @@
                     {macroSuggestion.recommendations.map((recItem) => (
                       <div
                         key={recItem.id}
-                        className="bg-slate-950/85 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2"
+                        className="bg-white/5 border border-white/5 rounded-xl p-2.5 flex items-center justify-between gap-2"
                       >
                         <div className="min-w-0">
                           <p className="text-xs font-extrabold text-white truncate">
@@ -4176,7 +4182,7 @@
                         <button
                           type="button"
                           onClick={() => onQuickAdd(recItem)}
-                          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-[11px] font-black shadow-sm transition active:scale-95"
+                          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-[11px] font-black shadow-sm transition-all active:scale-[0.97]"
                         >
                           ＋紀錄
                         </button>
@@ -4189,14 +4195,14 @@
 
           {/* 1. 訓練日前後補給專屬提示框（僅在「今日有訓練」時顯示） */}
           {isTrainingDay && (
-            <div className="bg-gradient-to-br from-emerald-950/50 via-slate-950/90 to-cyan-950/50 border border-emerald-500/35 rounded-2xl p-3.5 space-y-2">
+            <div className="bg-slate-950/60 border border-white/5 rounded-2xl p-3.5 space-y-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-black text-emerald-300">
                   ⚡ 訓練日專屬前後補給攻略（把握合成視窗）
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div className="bg-slate-950/80 border border-slate-800/90 rounded-xl p-2.5 space-y-1">
+                <div className="bg-white/5 border border-white/5 rounded-xl p-2.5 space-y-1">
                   <span className="text-[11px] font-black text-cyan-300 block">
                     ⏱️ 訓練前 1-2 小時
                   </span>
@@ -4205,7 +4211,7 @@
                     （例：地瓜 + 乳清 / 御飯糰 + 茶葉蛋）」。
                   </p>
                 </div>
-                <div className="bg-slate-950/80 border border-slate-800/90 rounded-xl p-2.5 space-y-1">
+                <div className="bg-white/5 border border-white/5 rounded-xl p-2.5 space-y-1">
                   <span className="text-[11px] font-black text-amber-300 block">
                     🚀 訓練後 30 分鐘內
                   </span>
@@ -4248,10 +4254,10 @@
 
       return (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0E1525] border border-slate-700/90 rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
+          <div className="bg-slate-900/60 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/10 rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-white/10">
                   ONBOARDING 初始設定
                 </span>
                 <h2 className="text-lg font-black text-white mt-1.5">建立你的專屬增肌營養目標</h2>
@@ -4260,7 +4266,10 @@
                 </p>
               </div>
               {canClose && (
-                <button onClick={onClose} className="text-slate-400 hover:text-white text-sm font-bold px-2 py-1">
+                <button
+                  onClick={onClose}
+                  className="text-slate-400 hover:text-white text-sm font-bold px-2 py-1 transition-all active:scale-[0.97]"
+                >
                   ✕
                 </button>
               )}
@@ -4273,10 +4282,10 @@
                   <button
                     type="button"
                     onClick={() => setGender('male')}
-                    className={`h-12 rounded-2xl font-extrabold text-sm border transition ${
+                    className={`h-12 rounded-2xl font-extrabold text-sm border transition-all active:scale-[0.97] ${
                       gender === 'male'
-                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                        ? 'bg-emerald-500/20 border-white/20 text-emerald-300'
+                        : 'bg-slate-950/60 border-white/5 text-slate-400'
                     }`}
                   >
                     ♂ 男性 (Male)
@@ -4284,10 +4293,10 @@
                   <button
                     type="button"
                     onClick={() => setGender('female')}
-                    className={`h-12 rounded-2xl font-extrabold text-sm border transition ${
+                    className={`h-12 rounded-2xl font-extrabold text-sm border transition-all active:scale-[0.97] ${
                       gender === 'female'
-                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                        ? 'bg-emerald-500/20 border-white/20 text-emerald-300'
+                        : 'bg-slate-950/60 border-white/5 text-slate-400'
                     }`}
                   >
                     ♀ 女性 (Female)
@@ -4305,7 +4314,7 @@
                     max="230"
                     value={height}
                     onChange={(e) => setHeight(e.target.value)}
-                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
+                    className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
                   />
                 </div>
                 <div>
@@ -4318,7 +4327,7 @@
                     max="200"
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
-                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
+                    className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
                   />
                 </div>
                 <div>
@@ -4330,7 +4339,7 @@
                     max="100"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
+                    className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-3 text-base font-black text-white text-center focus:outline-none focus:border-emerald-400"
                   />
                 </div>
               </div>
@@ -4343,10 +4352,10 @@
                       key={act.value}
                       type="button"
                       onClick={() => setActivityLevel(act.value)}
-                      className={`w-full text-left p-2.5 rounded-xl border transition flex items-center justify-between ${
+                      className={`w-full text-left p-2.5 rounded-xl border transition-all active:scale-[0.97] flex items-center justify-between ${
                         Number(activityLevel) === act.value
-                          ? 'bg-emerald-500/15 border-emerald-400 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                          ? 'bg-emerald-500/15 border-white/20 text-white'
+                          : 'bg-slate-950/60 border-white/5 text-slate-400'
                       }`}
                     >
                       <div>
@@ -4375,10 +4384,10 @@
                       key={m.id}
                       type="button"
                       onClick={() => setSurplus(m.surplus)}
-                      className={`p-2 rounded-xl border text-center transition ${
+                      className={`p-2 rounded-xl border text-center transition-all active:scale-[0.97] ${
                         Number(surplus) === m.surplus
-                          ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                          ? 'bg-cyan-500/20 border-white/20 text-cyan-300'
+                          : 'bg-slate-950/60 border-white/5 text-slate-400'
                       }`}
                     >
                       <div className="text-xs font-black">+{m.surplus} kcal</div>
@@ -4388,8 +4397,8 @@
                 </div>
               </div>
 
-              <div className="bg-slate-950 border border-emerald-500/40 rounded-2xl p-3.5 space-y-2.5">
-                <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+              <div className="bg-slate-950/60 border border-white/5 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between text-xs border-b border-white/5 pb-2">
                   <span className="text-slate-400 font-bold">
                     BMR: <strong className="text-white">{previewTargets.bmr}</strong> kcal
                   </span>
@@ -4402,15 +4411,15 @@
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-slate-900 rounded-xl p-2">
+                  <div className="bg-white/5 rounded-xl p-2">
                     <span className="text-[10px] font-bold text-cyan-400 block">目標蛋白質</span>
                     <span className="text-base font-black text-white">{previewTargets.protein}g</span>
                   </div>
-                  <div className="bg-slate-900 rounded-xl p-2">
+                  <div className="bg-white/5 rounded-xl p-2">
                     <span className="text-[10px] font-bold text-amber-400 block">目標碳水</span>
                     <span className="text-base font-black text-white">{previewTargets.carbs}g</span>
                   </div>
-                  <div className="bg-slate-900 rounded-xl p-2">
+                  <div className="bg-white/5 rounded-xl p-2">
                     <span className="text-[10px] font-bold text-rose-400 block">目標脂肪</span>
                     <span className="text-base font-black text-white">{previewTargets.fat}g</span>
                   </div>
@@ -4419,7 +4428,7 @@
 
               <button
                 type="submit"
-                className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20"
+                className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.97]"
               >
                 🚀 儲存目標並進入增肌儀表板
               </button>
@@ -4504,7 +4513,7 @@
 
       return (
         <div className="min-h-screen flex items-center justify-center px-4 py-8">
-          <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+          <div className="max-w-md w-full bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 rounded-3xl p-6 shadow-2xl space-y-6">
             <div className="text-center space-y-2">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 mx-auto flex items-center justify-center text-slate-950 font-black text-2xl shadow-xl shadow-emerald-500/20">
                 💪
@@ -4524,7 +4533,7 @@
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="例如：阿傑、增肌戰士"
-                    className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
+                    className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
                   />
                 </div>
               )}
@@ -4537,7 +4546,7 @@
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="athlete@example.com"
-                  className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
+                  className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
                 />
               </div>
 
@@ -4550,14 +4559,14 @@
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="至少 6 位字元"
-                  className="w-full h-12 bg-slate-950 border border-slate-800 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
+                  className="w-full h-12 bg-slate-950/60 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-emerald-400"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/25 transition active:scale-95"
+                className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.97]"
               >
                 {isRegister ? '建立增肌帳號並開始設定' : '登入增肌追蹤器'}
               </button>
@@ -4567,7 +4576,7 @@
               <button
                 type="button"
                 onClick={() => setIsRegister(!isRegister)}
-                className="text-emerald-400 font-bold hover:underline"
+                className="text-emerald-400 font-bold hover:underline transition-all active:scale-[0.97]"
               >
                 {isRegister ? '已有帳號？點此登入' : '首次使用？點此註冊新帳號'}
               </button>
@@ -4575,23 +4584,23 @@
               <button
                 type="button"
                 onClick={onOpenCloudSettings}
-                className="text-slate-400 hover:text-white font-semibold"
+                className="text-slate-400 hover:text-white font-semibold transition-all active:scale-[0.97]"
               >
                 🔑 API / 雲端設定
               </button>
             </div>
 
             <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-slate-800"></div>
+              <div className="flex-grow border-t border-white/5"></div>
               <span className="flex-shrink mx-3 text-[11px] text-slate-500 font-bold">快速登入選項</span>
-              <div className="flex-grow border-t border-slate-800"></div>
+              <div className="flex-grow border-t border-white/5"></div>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                className="min-h-[48px] rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 flex items-center justify-center gap-2 transition"
+                className="min-h-[48px] rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-200 flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
               >
                 <span>🌐</span> Google 登入
               </button>
@@ -4606,7 +4615,7 @@
                     mode: isCloudConnected ? 'firebase' : 'local-bound'
                   })
                 }
-                className="min-h-[48px] rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-extrabold text-emerald-300 flex items-center justify-center gap-1.5 transition"
+                className="min-h-[48px] rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-white/10 text-xs font-extrabold text-emerald-300 flex items-center justify-center gap-1.5 transition-all active:scale-[0.97]"
               >
                 <span>⚡</span> 一鍵快速體驗登入
               </button>
@@ -5143,10 +5152,10 @@
       return (
         <div className="space-y-4">
           {/* 頂部快速跳過或自訂座標按鈕區（選項 B 與 選項 C） */}
-          <div className="bg-slate-900/95 border border-slate-800 rounded-3xl p-4 space-y-3 shadow-xl">
+          <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 rounded-3xl p-4 space-y-3 shadow-2xl">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-white/10">
                   STEP 1 · LOCATION FIRST
                 </span>
                 <h2 className="text-base font-black text-white mt-1">
@@ -5172,7 +5181,7 @@
                     lng: null
                   })
                 }
-                className="min-h-[54px] px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-left flex items-center justify-between gap-2 transition active:scale-98 group"
+                className="min-h-[54px] px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left flex items-center justify-between gap-2 transition-all active:scale-[0.97] group"
               >
                 <div className="min-w-0">
                   <div className="text-xs font-black text-white group-hover:text-emerald-300 transition truncate">
@@ -5185,7 +5194,7 @@
                 <span className="text-emerald-400 font-black text-sm flex-shrink-0">➔</span>
               </button>
 
-              <div className="bg-slate-950/90 border border-amber-500/35 rounded-2xl p-2.5 flex flex-col justify-between gap-2">
+              <div className="bg-slate-950/60 border border-white/5 rounded-2xl p-2.5 flex flex-col justify-between gap-2">
                 <div className="flex items-center justify-between gap-1.5">
                   <div className="min-w-0">
                     <div className="text-xs font-black text-amber-300 truncate">
@@ -5198,7 +5207,7 @@
                   <button
                     type="button"
                     onClick={() => setShowCustomGpsInput((v) => !v)}
-                    className="text-[10px] px-2 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-bold whitespace-nowrap"
+                    className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-slate-300 hover:text-white font-bold whitespace-nowrap transition-all active:scale-[0.97]"
                   >
                     {showCustomGpsInput ? '收合命名' : '＋備註攤名'}
                   </button>
@@ -5210,14 +5219,14 @@
                     value={customGpsName}
                     onChange={(e) => setCustomGpsName(e.target.value)}
                     placeholder="選填攤販名稱（例：巷口無名水煎包、學餐自助餐）"
-                    className="w-full h-8 bg-slate-900 border border-slate-700 rounded-xl px-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                    className="w-full h-8 bg-slate-900/80 border border-white/10 rounded-xl px-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 )}
 
                 <button
                   type="button"
                   onClick={handleSelectCustomGps}
-                  className="w-full py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-black transition active:scale-98"
+                  className="w-full py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-white/10 text-amber-300 text-xs font-black transition-all active:scale-[0.97]"
                 >
                   📡 使用當前 GPS 座標進入 Step 2 ➔
                 </button>
@@ -5226,10 +5235,10 @@
           </div>
 
           {/* 選項 A：微型 Google Map 與 搜尋/附近店家列表 */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/30 rounded-3xl p-4 space-y-3.5 shadow-xl">
+          <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 rounded-3xl p-4 space-y-3.5 shadow-2xl">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-white/10">
                   選項 A · GOOGLE MAPS & PLACES
                 </span>
                 <h3 className="text-sm font-black text-white mt-1">
@@ -5240,14 +5249,14 @@
                 <button
                   type="button"
                   onClick={onRefreshGps}
-                  className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-cyan-300 border border-slate-700 transition"
+                  className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-cyan-300 border border-white/10 transition-all active:scale-[0.97]"
                 >
                   📡 重新定位
                 </button>
                 <button
                   type="button"
                   onClick={onOpenCloudModal}
-                  className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-300 border border-slate-700 transition"
+                  className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-emerald-300 border border-white/10 transition-all active:scale-[0.97]"
                 >
                   🔑 Maps 金鑰設定
                 </button>
@@ -5255,7 +5264,7 @@
             </div>
 
             {/* 微型 Google Map 視窗 */}
-            <div className="relative w-full h-52 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+            <div className="relative w-full h-52 rounded-2xl overflow-hidden border border-white/10 bg-slate-950">
               <div ref={mapContainerRef} className="w-full h-full" />
 
               {mapStatus === 'no_key' && (
@@ -5270,7 +5279,7 @@
                   <button
                     type="button"
                     onClick={onOpenCloudModal}
-                    className="mt-1 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md transition"
+                    className="mt-1 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md transition-all active:scale-[0.97]"
                   >
                     🔑 前往綁定 Maps API 金鑰
                   </button>
@@ -5297,7 +5306,7 @@
                   <button
                     type="button"
                     onClick={onOpenCloudModal}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 text-emerald-300 border border-slate-700 text-xs font-bold"
+                    className="px-3 py-1.5 rounded-xl bg-white/5 text-emerald-300 border border-white/10 text-xs font-bold transition-all active:scale-[0.97]"
                   >
                     🔑 檢查 Maps 金鑰
                   </button>
@@ -5312,13 +5321,13 @@
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="🔍 搜尋店名或直接輸入餐廳名稱（例：Subway、八方雲集、麥當勞）"
-                className="flex-1 min-h-[44px] bg-slate-950/90 border border-slate-800 rounded-2xl px-3.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                className="flex-1 min-h-[44px] bg-slate-950/60 border border-white/10 rounded-2xl px-3.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
               />
               {mapStatus === 'ready' && (
                 <button
                   type="submit"
                   disabled={searchingPlaces}
-                  className="px-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs whitespace-nowrap transition disabled:opacity-50"
+                  className="px-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs whitespace-nowrap transition-all active:scale-[0.97] disabled:opacity-50"
                 >
                   {searchingPlaces ? '搜尋中...' : '地圖搜尋'}
                 </button>
@@ -5336,7 +5345,7 @@
                       lng: currentCoords?.lng ?? null
                     })
                   }
-                  className="px-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs whitespace-nowrap transition"
+                  className="px-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs whitespace-nowrap transition-all active:scale-[0.97]"
                 >
                   直接選此店 ➔
                 </button>
@@ -5369,7 +5378,7 @@
                         lng: store.lng ?? currentCoords?.lng ?? null
                       })
                     }
-                    className="w-full text-left bg-slate-950/90 hover:bg-slate-900 hover:border-emerald-400/60 border border-slate-800/90 rounded-2xl p-3 flex items-center justify-between gap-2.5 transition group"
+                    className="w-full text-left bg-slate-950/60 hover:bg-white/5 border border-white/5 rounded-2xl p-3 flex items-center justify-between gap-2.5 transition-all active:scale-[0.97] group"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -5377,12 +5386,12 @@
                           🏪 {store.placeName}
                         </span>
                         {store.isHistory && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-white/10 font-bold">
                             📜 有歷史菜單
                           </span>
                         )}
                         {store.distanceM != null && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-white/10 font-bold">
                             距離 {store.distanceM}m
                           </span>
                         )}
@@ -5880,7 +5889,7 @@
       };
 
       return (
-        <div className="fixed inset-0 z-30 md:relative md:inset-auto md:z-auto flex-1 flex flex-col bg-slate-100 md:rounded-3xl overflow-hidden min-h-[75vh] md:border md:border-slate-800/80 md:shadow-2xl select-none">
+        <div className="fixed inset-0 z-30 md:relative md:inset-auto md:z-auto flex-1 flex flex-col bg-slate-100 md:rounded-3xl overflow-hidden min-h-[75vh] md:border md:border-white/5 md:shadow-2xl select-none">
           {/* 全螢幕明亮淺色 Google Map 底圖 (徹底佔滿容器，避免手機瀏覽器 dvh 計算問題，電腦版則優雅適配右側主畫面) */}
           <div className="absolute inset-0 w-full h-full">
             {savedMapsKey && !mapsError ? (
@@ -5894,7 +5903,7 @@
                     'radial-gradient(circle at 25% 25%, #e0f2fe 0%, #f1f5f9 45%, #e2e8f0 100%)'
                 }}
               >
-                <div className="max-w-sm bg-slate-900/65 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl p-6 text-left space-y-3 text-white">
+                <div className="max-w-sm bg-slate-900/65 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/10 shadow-2xl rounded-3xl p-6 text-left space-y-3 text-white">
                   <div className="flex items-center gap-2.5">
                     <span className="text-2xl">🗺️</span>
                     <div>
@@ -5912,7 +5921,7 @@
                     <button
                       type="button"
                       onClick={onOpenCloudConfig}
-                      className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-xs shadow-lg active:scale-95 transition"
+                      className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-xs shadow-lg transition-all active:scale-[0.97]"
                     >
                       🔑 前往設定 Maps 金鑰
                     </button>
@@ -5927,7 +5936,7 @@
                 {/* 左側群組：定位狀態列 + 關鍵字搜尋框 */}
                 <div className="w-full md:w-[420px] flex flex-col gap-2 pointer-events-auto">
                   {/* 頂部狀態與定位列 (Apple Frosted Glass) */}
-                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/65 backdrop-blur-xl border border-white/20 shadow-2xl text-white">
+                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/65 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/10 shadow-2xl text-white">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
                       <span className="text-xs font-extrabold truncate">
@@ -5942,14 +5951,14 @@
                       <button
                         type="button"
                         onClick={onRefreshGps}
-                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-white transition active:scale-95"
+                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-[11px] font-bold text-white transition-all active:scale-[0.97]"
                       >
                         🔄 定位
                       </button>
                       <button
                         type="button"
                         onClick={onOpenCloudConfig}
-                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-[11px] font-bold text-cyan-200 transition active:scale-95"
+                        className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-[11px] font-bold text-cyan-200 transition-all active:scale-[0.97]"
                       >
                         🔑 金鑰
                       </button>
@@ -5959,7 +5968,7 @@
                   {/* 整合搜尋框：搜尋特定餐廳或食物，結果直接轉為地圖圖釘 */}
                   <form
                     onSubmit={handleKeywordSearch}
-                    className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-900/65 backdrop-blur-xl border border-white/20 shadow-2xl"
+                    className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-900/65 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/10 shadow-2xl"
                   >
                     <input
                       type="text"
@@ -5972,7 +5981,7 @@
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 text-[11px] flex items-center justify-center flex-shrink-0"
+                        className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 text-[11px] flex items-center justify-center flex-shrink-0 transition-all active:scale-[0.97]"
                         title="清除搜尋文字"
                       >
                         ✕
@@ -5981,7 +5990,7 @@
                     <button
                       type="submit"
                       disabled={searchingKeyword || !searchQuery.trim()}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-md transition active:scale-95 disabled:opacity-50"
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs whitespace-nowrap shadow-md transition-all active:scale-[0.97] disabled:opacity-50"
                     >
                       {searchingKeyword ? '搜尋中...' : '搜尋'}
                     </button>
@@ -5993,7 +6002,7 @@
                   type="button"
                   disabled={searchingRandom}
                   onClick={handleRandomOpenRestaurant}
-                  className="w-full md:w-auto py-3.5 px-5 rounded-3xl bg-slate-900/65 hover:bg-slate-900/80 active:scale-[0.98] backdrop-blur-xl border border-white/25 shadow-2xl flex items-center justify-center gap-2.5 text-white transition group cursor-pointer disabled:opacity-60 pointer-events-auto"
+                  className="w-full md:w-auto py-3.5 px-5 rounded-3xl bg-slate-900/65 hover:bg-slate-900/80 transition-all active:scale-[0.97] backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/15 shadow-2xl flex items-center justify-center gap-2.5 text-white group cursor-pointer disabled:opacity-60 pointer-events-auto"
                 >
                   <span className={`text-xl ${searchingRandom ? 'animate-spin' : 'group-hover:rotate-12 transition-transform'}`}>
                     🎲
@@ -6018,7 +6027,7 @@
                     <div
                       key={restaurant.placeId || idx}
                       onClick={() => mapRef.current?.panTo({ lat: restaurant.lat, lng: restaurant.lng })}
-                      className="snap-center flex-shrink-0 w-[88%] md:w-[400px] bg-slate-900/75 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl p-4 text-white transition-all cursor-pointer hover:bg-slate-900/85"
+                      className="snap-center flex-shrink-0 w-[88%] md:w-[400px] bg-slate-900/75 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/10 shadow-2xl rounded-3xl p-4 text-white transition-all cursor-pointer hover:bg-slate-900/85"
                     >
                       {/* 卡片上半部：狀態、距離、評分與關閉按鈕 */}
                       <div className="flex items-start justify-between gap-3">
@@ -6047,7 +6056,7 @@
                               e.stopPropagation();
                               setSearchResults([]);
                             }}
-                            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-xs text-slate-200 flex-shrink-0 transition"
+                            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-xs text-slate-200 flex-shrink-0 transition-all active:scale-[0.97]"
                           >
                             ✕
                           </button>
@@ -6069,7 +6078,7 @@
                               lng: restaurant.lng
                             });
                           }}
-                          className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-1.5 transition active:scale-95"
+                          className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-1.5 transition-all active:scale-[0.97]"
                         >
                           <span>⚡ 帶入紀錄</span>
                         </button>
@@ -6137,10 +6146,10 @@
 
       return (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0E1525] border border-slate-700 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900/40 backdrop-blur-2xl backdrop-saturate-[1.5] border border-white/5 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-black text-white">🔑 設定 Gemini / Maps API 金鑰與雲端同步</h3>
-              <button onClick={onClose} className="text-slate-400 hover:text-white font-bold">✕</button>
+              <button onClick={onClose} className="text-slate-400 hover:text-white font-bold transition-all active:scale-[0.97]">✕</button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
@@ -6153,7 +6162,7 @@
                   value={geminiKey}
                   onChange={(e) => setGeminiKey(e.target.value)}
                   placeholder="貼上你的 AIzaSy... Gemini API Key"
-                  className="w-full h-11 bg-slate-950 border border-slate-800 rounded-xl px-3 text-xs text-white focus:outline-none focus:border-emerald-400"
+                  className="w-full h-11 bg-slate-950/60 border border-white/5 rounded-xl px-3 text-xs text-white focus:outline-none focus:border-emerald-400"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
                   可從 Google AI Studio 取得。登入狀態下儲存將自動同步至雲端 Profile！
@@ -6169,7 +6178,7 @@
                   value={mapsKey}
                   onChange={(e) => setMapsKey(e.target.value)}
                   placeholder="貼上你的 AIzaSy... Google Maps API Key"
-                  className="w-full h-11 bg-slate-950 border border-slate-800 rounded-xl px-3 text-xs text-white focus:outline-none focus:border-amber-400"
+                  className="w-full h-11 bg-slate-950/60 border border-white/5 rounded-xl px-3 text-xs text-white focus:outline-none focus:border-amber-400"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
                   同步寫入 Firebase 的 userProfile 中，只要登入帳號就會自動載入 Gemini 與 Maps 兩把金鑰到本機！
@@ -6185,7 +6194,7 @@
                   value={firebaseJson}
                   onChange={(e) => setFirebaseJson(e.target.value)}
                   placeholder={`{\n  "apiKey": "AIza...",\n  "authDomain": "your-app.firebaseapp.com",\n  "projectId": "your-app"\n}`}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-slate-950/60 border border-white/5 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -6195,14 +6204,14 @@
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 h-11 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+                  className="flex-1 h-11 rounded-xl bg-slate-800/70 text-slate-300 text-xs font-bold transition-all active:scale-[0.97]"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 h-11 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black disabled:opacity-50"
+                  className="flex-1 h-11 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black disabled:opacity-50 transition-all active:scale-[0.97]"
                 >
                   {saving ? '雲端同步中...' : '儲存並綁定雲端'}
                 </button>
