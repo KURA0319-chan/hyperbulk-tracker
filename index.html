@@ -3531,7 +3531,7 @@
               </main>
 
               {/* 手機底部導覽列：蘋果風「懸浮膠囊」設計 & 順序：1. 儀表板、2. 地圖探索、3. 紀錄 */}
-              <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[360px] p-1.5 rounded-full bg-white/30 dark:bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[2.5] shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-white/20 dark:border-white/10 z-50">
+              <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[360px] p-1.5 rounded-full bg-white/65 dark:bg-slate-900/65 backdrop-blur-xl backdrop-saturate-[2.5] border border-slate-200/50 dark:border-white/25 shadow-2xl z-50">
                 <div className="grid grid-cols-3 gap-1">
                   <button
                     type="button"
@@ -4790,7 +4790,7 @@
 
     /**
      * 解析新版 Places API (New) 的 Place 實例屬性
-     * (place.id, place.displayName, place.formattedAddress, place.location.lat()/lng())
+     * (place.id, place.displayName, place.formattedAddress, place.location.lat()/lng(), todayHours)
      */
     function parseNewPlaceObject(place, centerPos = null) {
       if (!place) return null;
@@ -4824,6 +4824,18 @@
             )
           : null;
 
+      // 解析當日營業時間：Google weekdayDescriptions 陣列 0 為星期一，JS getDay() 0 為星期日
+      let todayHours = '無營業時間資訊';
+      const weekdayDescs = place.regularOpeningHours?.weekdayDescriptions;
+      if (Array.isArray(weekdayDescs) && weekdayDescs.length > 0) {
+        const googleDayIndex = (new Date().getDay() + 6) % 7;
+        const rawTodayDesc = weekdayDescs[googleDayIndex] || weekdayDescs[0] || '';
+        if (typeof rawTodayDesc === 'string' && rawTodayDesc.trim()) {
+          const stripped = rawTodayDesc.replace(/^[^:：]+[:：]\s*/, '').trim();
+          todayHours = stripped || rawTodayDesc.trim();
+        }
+      }
+
       return {
         placeId: place.id || `place_${displayName}`,
         placeName: displayName,
@@ -4831,7 +4843,8 @@
         lat,
         lng,
         distanceM: dist,
-        rating: place.rating || null
+        rating: place.rating || null,
+        todayHours
       };
     }
 
@@ -5627,7 +5640,8 @@
                   isOpenResult = undefined;
                 }
 
-                const isOpen = place.businessStatus === 'OPERATIONAL' && isOpenResult !== false;
+                const is24h = parsed?.todayHours?.includes('24 小時');
+                const isOpen = is24h ? true : (place.businessStatus === 'OPERATIONAL' && isOpenResult !== false);
                 setSearchResults([{ ...parsed, openNow: isOpen }]);
                 mapRef.current.panTo({ lat: parsed.lat, lng: parsed.lng });
               }
@@ -5733,15 +5747,18 @@
                   isOpenResult = undefined;
                 }
 
-                // 無罪推定：明確回傳 false (打烊) 才過濾，undefined (小吃攤無時間資料) 一律放行
-                if (isOpenResult === false) continue;
-
                 const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
                 if (!parsed || parsed.distanceM == null || parsed.distanceM > 2000) continue;
 
+                const is24h = parsed?.todayHours?.includes('24 小時');
+                const isOpen = is24h ? true : (p.businessStatus === 'OPERATIONAL' && isOpenResult !== false);
+
+                // 無罪推定：明確打烊才過濾，24 小時營業或小吃攤無時間資料一律放行
+                if (!isOpen) continue;
+
                 openCandidates.push({
                   ...parsed,
-                  openNow: isOpenResult ?? true
+                  openNow: isOpen
                 });
               }
 
@@ -5830,7 +5847,8 @@
                 lng: centerLng + 0.0012,
                 distanceM: 240,
                 rating: 4.7,
-                openNow: true
+                openNow: true,
+                todayHours: '11:00–20:30'
               },
               {
                 placeId: 'demo_random_2',
@@ -5840,7 +5858,8 @@
                 lng: centerLng + 0.0019,
                 distanceM: 310,
                 rating: 4.5,
-                openNow: true
+                openNow: true,
+                todayHours: '11:30–22:00'
               },
               {
                 placeId: 'demo_random_3',
@@ -5850,7 +5869,8 @@
                 lng: centerLng - 0.0024,
                 distanceM: 290,
                 rating: 4.8,
-                openNow: true
+                openNow: true,
+                todayHours: '10:30–21:00'
               }
             ];
             const chosen = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
@@ -5916,9 +5936,11 @@
               }
               const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
               if (!parsed) continue;
+              const is24h = parsed?.todayHours?.includes('24 小時');
+              const isOpen = is24h ? true : (p.businessStatus === 'OPERATIONAL' && isOpenResult !== false);
               results.push({
                 ...parsed,
-                openNow: isOpenResult !== false
+                openNow: isOpen
               });
             }
 
@@ -5985,7 +6007,8 @@
               lng: centerLng,
               distanceM: 0,
               rating: null,
-              openNow: true
+              openNow: true,
+              todayHours: '無營業時間資訊'
             };
             setFoundPoolCount(1);
             setSearchResults([customStore]);
@@ -6158,6 +6181,7 @@
                           </div>
                           <h3 className="text-base font-black text-slate-900 dark:text-white truncate">🏪 {restaurant.placeName}</h3>
                           {restaurant.address && <p className="text-[11px] text-slate-500 dark:text-slate-300 truncate mt-0.5">{restaurant.address}</p>}
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">🕒 今日時間: {restaurant.todayHours}</p>
                         </div>
                         {/* 只有在第一張卡片顯示關閉(清空)按鈕 */}
                         {idx === 0 && (
