@@ -5718,47 +5718,26 @@
 
               const res = await Place.searchByText({
                 textQuery: randomKeyword,
-                fields: [
-                  'id',
-                  'displayName',
-                  'formattedAddress',
-                  'location',
-                  'rating',
-                  'regularOpeningHours',
-                  'businessStatus'
-                ],
-                locationBias: {
-                  center,
-                  radius: 1500
-                },
+                // 移除 regularOpeningHours 與 businessStatus，降級回 Essentials 費率
+                fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating'],
+                locationBias: { center, radius: 1500 },
                 maxResultCount: 20,
-                language: 'zh-TW'
+                language: 'zh-TW',
+                // 加入這個參數，直接只回傳營業中的店家
+                openNow: true
               });
+
               const places = res?.places || [];
-
               const openCandidates = [];
+
               for (const p of places) {
-                if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') continue;
-
-                let isOpenResult;
-                try {
-                  isOpenResult = await p.isOpen();
-                } catch (e) {
-                  isOpenResult = undefined;
-                }
-
                 const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
                 if (!parsed || parsed.distanceM == null || parsed.distanceM > 2000) continue;
 
-                const is24h = parsed?.todayHours?.includes('24 小時');
-                const isOpen = is24h ? true : (p.businessStatus === 'OPERATIONAL' && isOpenResult !== false);
-
-                // 無罪推定：明確打烊才過濾，24 小時營業或小吃攤無時間資料一律放行
-                if (!isOpen) continue;
-
+                // 直接加入陣列，完全刪除原本的 try...catch (isOpenResult = await p.isOpen())
                 openCandidates.push({
                   ...parsed,
-                  openNow: isOpen
+                  openNow: true // 因為 API 已經幫我們篩選過了
                 });
               }
 
@@ -5907,40 +5886,23 @@
 
             const res = await Place.searchByText({
               textQuery: q,
-              fields: [
-                'id',
-                'displayName',
-                'formattedAddress',
-                'location',
-                'rating',
-                'regularOpeningHours',
-                'businessStatus'
-              ],
-              locationBias: {
-                center: { lat: centerLat, lng: centerLng },
-                radius: 2500
-              },
+              fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating'],
+              locationBias: { center: { lat: centerLat, lng: centerLng }, radius: 2500 },
               maxResultCount: 15,
               language: 'zh-TW'
             });
 
             const places = res?.places || [];
             const results = [];
+
             for (const p of places) {
-              if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') continue;
-              let isOpenResult;
-              try {
-                isOpenResult = await p.isOpen();
-              } catch (errOpen) {
-                isOpenResult = undefined;
-              }
               const parsed = parseNewPlaceObject(p, { lat: centerLat, lng: centerLng });
               if (!parsed) continue;
-              const is24h = parsed?.todayHours?.includes('24 小時');
-              const isOpen = is24h ? true : (p.businessStatus === 'OPERATIONAL' && isOpenResult !== false);
+
+              // 完全刪除 await p.isOpen() 的呼叫
               results.push({
                 ...parsed,
-                openNow: isOpen
+                openNow: true // 預設亮燈或改為不顯示狀態，避免為了這個燈號每搜一次花 8 台幣
               });
             }
 
